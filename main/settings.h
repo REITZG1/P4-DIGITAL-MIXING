@@ -18,7 +18,7 @@
 #define I2S_COMM_FORMAT_I2S_MSB ((i2s_comm_format_t)2)
 #endif
 
-const String VERSION = "2.0.0 2026/06/29 P4-mixer8ch-ws";
+const String VERSION = "2.0.0 2026/06/29 ESP32-mixer8ch-ws";
 #define CONFIG_TAG 125
 
 #define SAVE_AS_JSON 1
@@ -29,8 +29,8 @@ const String APPLICATION_TITLE = "8-CH DIGITAL MIXER";
 // Channel config
 const int NUM_MIX_CH = 8;
 const int NUM_EQ_BANDS = 15;
-const int NUM_PHYS_IN = 4;
-const int NUM_PHYS_OUT = 4;
+const int NUM_PHYS_IN = 2;
+const int NUM_PHYS_OUT = 2;
 
 // Bus IDs
 const int BUS_LR = 0;
@@ -47,7 +47,6 @@ const float EQ_FREQS[NUM_EQ_BANDS] = {
   10000, 12000, 14000, 16000, 18000
 };
 
-// Compressor params per channel
 struct CompressorParams {
   float ratio;
   float attack;
@@ -56,7 +55,6 @@ struct CompressorParams {
   float gain;
 };
 
-// Send levels per channel
 struct ChannelSends {
   float lr;
   float group1;
@@ -65,7 +63,6 @@ struct ChannelSends {
   float aux2;
 };
 
-// Per-channel state
 struct MixChannel {
   float eq[NUM_EQ_BANDS];
   ChannelSends send;
@@ -75,7 +72,6 @@ struct MixChannel {
   bool mute;
 };
 
-// Master bus levels
 struct MasterState {
   float lrL;
   float lrR;
@@ -91,7 +87,7 @@ struct MasterState {
   float vuAux2;
 };
 
-// Legacy compat from v1 (for multiband DSP)
+// Legacy compat from v1 (multiband DSP)
 const int MAX_NUM_BANDS = 10;
 const int ALL_NUM_BANDS = MAX_NUM_BANDS + 2;
 const int N_BAND = 10, N_FREQ = 11;
@@ -109,7 +105,7 @@ const int FILTER_FREQ[N_BAND][N_FREQ] = {
   {20, 200, 500, 2000, 5000, 13000, 14000, 15000, 16000, 17000, 18000}
 };
 
-// Legacy DSP params (kept for multiband main bus)
+// DSP params (multiband main bus)
 const float MAX_INPUT_LEVEL = 90.0f;
 const float MAX_OUTPUT_LEVEL = 10.0f;
 const float MAX_BALANCE = 100.0f;
@@ -173,21 +169,15 @@ const float DEFAULT_VOL_COMPENSATION = 20.0f;
 const int SampleRateFreq = 48000;
 const int channelCount = 2;
 
-// I2S Pinout (ESP32-P4, shared BCK/LRCK per I2S port)
-#define I2S_BCK_PIN       5
-#define I2S_LRCLK_PIN     6
-#define I2S_DOUT_PIN      7
-#define I2S_DIN_PIN       4
-#define I2S0_MCLK_PIN     21
-#define CODEC_ENABLE_PIN  8
+// I2S Pinout for ESP32 DevKit + PCM1808/PCM5102 (shared BCK/LRCK)
+#define I2S_BCK_PIN       26   // Shared Bit Clock
+#define I2S_LRCLK_PIN     27   // Shared LR Clock (Word Select)
+#define I2S_DOUT_PIN      25   // DOUT → PCM5102 DIN (DAC)
+#define I2S_DIN_PIN       33   // DIN  ← PCM1808 DOUT (ADC)
+#define CODEC_ENABLE_PIN  -1   // Not used
+#define I2S0_MCLK_PIN     -1   // Not used
 
-#define I2S1_BCK_PIN      15
-#define I2S1_LRCLK_PIN    16
-#define I2S1_DOUT_PIN     17
-#define I2S1_DIN_PIN      10
-#define I2S1_ENABLE_PIN   9
-#define I2S1_MCLK_PIN     -1
-
+// WDT
 #define WDT_TIMEOUT 10
 
 static uint8_t CORE_ZERO = 0;

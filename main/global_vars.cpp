@@ -1,4 +1,5 @@
 #include "global_vars.h"
+#include <cmath>
 
 bool espRestart = false;
 bool isGoodFileSystem = true;
@@ -6,12 +7,11 @@ uint32_t CounterLoopRestart_100ms = 0, RestartTimeX100ms = DEFAULT_RESTART_TIME;
 uint16_t MuteTimeX100ms = DEFAULT_FORCED_MUTE_TIME;
 int TimeZone = -3;
 
-// 8-channel mixer state
 MixChannel channels[NUM_MIX_CH];
 MasterState master;
-float inTrim[NUM_PHYS_IN] = {0, 0, 0, 0};
-bool inMute[NUM_PHYS_IN] = {false, false, false, false};
-float inTrimLinear[NUM_PHYS_IN] = {1.0f, 1.0f, 1.0f, 1.0f};
+float inTrim[NUM_PHYS_IN] = {0, 0};
+bool inMute[NUM_PHYS_IN] = {false, false};
+float inTrimLinear[NUM_PHYS_IN] = {1.0f, 1.0f};
 
 float VuArrValue[MAX_NUM_BANDS];
 float InputLevel = DEFAULT_INPUT_LEVEL;
@@ -39,8 +39,7 @@ float Post_Emphasis_Linear[MAX_NUM_BANDS];
 float Clipper_Linear_p = 0.0f;
 float Clipper_Linear_n = 0.0f;
 
-AudioDriver i2sCodec0;
-AudioDriver i2sCodec1;
+AudioDriver i2sCodec;
 DualCompressor comp_st[MAX_NUM_BANDS];
 DualCompressor limiter_st;
 YummyDSP dspBAND[MAX_NUM_BANDS], dspDelay, dspFmFilter;
@@ -61,7 +60,6 @@ float inputSampleR = 0, inputSampleL = 0, outputSampleR = 0, outputSampleL = 0;
 portMUX_TYPE wsMux = portMUX_INITIALIZER_UNLOCKED;
 bool wsStateChanged = false;
 
-// Per-channel VU peak tracking
 static float chVuPeak[NUM_MIX_CH] = {0};
 static float busVuPeak[NUM_BUSES] = {0};
 static float masterVuPeakL = 0, masterVuPeakR = 0;
@@ -94,7 +92,7 @@ float getPeak(float sample) {
 
 void updateVuBroadcast() {
   vuCounter++;
-  if (vuCounter < 10) return; // every 10 audio blocks (~10ms at 48kHz)
+  if (vuCounter < 10) return;
   vuCounter = 0;
 
   taskENTER_CRITICAL(&wsMux);
@@ -279,12 +277,9 @@ void loadDefaultConfig() {
   master.group2 = 0.8f;
   master.aux1 = 0.8f;
   master.aux2 = 0.8f;
-  master.vuMasterL = 0;
-  master.vuMasterR = 0;
-  master.vuGroup1 = 0;
-  master.vuGroup2 = 0;
-  master.vuAux1 = 0;
-  master.vuAux2 = 0;
+  master.vuMasterL = 0; master.vuMasterR = 0;
+  master.vuGroup1 = 0; master.vuGroup2 = 0;
+  master.vuAux1 = 0; master.vuAux2 = 0;
 
   InputLevel = DEFAULT_INPUT_LEVEL;
   OutputLevel = DEFAULT_OUTPUT_LEVEL;
@@ -328,13 +323,11 @@ void readConfig() {
     return;
   }
 
-  // Mixer channels
   for (int ch = 0; ch < NUM_MIX_CH; ch++) {
     char key[8];
     snprintf(key, sizeof(key), "ch%d", ch);
     JsonObject chObj = doc[key];
     if (chObj.isNull()) continue;
-
     JsonArray eqArr = chObj["eq"];
     if (!eqArr.isNull()) {
       for (int b = 0; b < NUM_EQ_BANDS && b < eqArr.size(); b++) {
@@ -355,7 +348,6 @@ void readConfig() {
     channels[ch].mute = chObj["mute"] | false;
   }
 
-  // Master
   JsonObject mst = doc["master"];
   if (!mst.isNull()) {
     master.lrL = mst["lrL"] | 0.8f;
@@ -366,7 +358,6 @@ void readConfig() {
     master.aux2 = mst["a2"] | 0.8f;
   }
 
-  // Legacy DSP
   InputLevel = doc["Il"] | DEFAULT_INPUT_LEVEL;
   OutputLevel = doc["Ol"] | DEFAULT_OUTPUT_LEVEL;
   Clipper = doc["Clip"] | DEFAULT_CLIPPER;
@@ -397,16 +388,12 @@ void readConfig() {
 
 bool saveConfig() {
   DynamicJsonDocument doc(8192);
-
-  // Mixer channels
   for (int ch = 0; ch < NUM_MIX_CH; ch++) {
     char key[8];
     snprintf(key, sizeof(key), "ch%d", ch);
     JsonObject chObj = doc.createNestedObject(key);
     JsonArray eqArr = chObj.createNestedArray("eq");
-    for (int b = 0; b < NUM_EQ_BANDS; b++) {
-      eqArr.add(channels[ch].eq[b]);
-    }
+    for (int b = 0; b < NUM_EQ_BANDS; b++) eqArr.add(channels[ch].eq[b]);
     chObj["s_lr"] = channels[ch].send.lr;
     chObj["s_g1"] = channels[ch].send.group1;
     chObj["s_g2"] = channels[ch].send.group2;
@@ -420,31 +407,18 @@ bool saveConfig() {
     chObj["c_gain"] = channels[ch].comp.gain;
     chObj["mute"] = channels[ch].mute;
   }
-
-  // Master
   JsonObject mst = doc.createNestedObject("master");
-  mst["lrL"] = master.lrL;
-  mst["lrR"] = master.lrR;
-  mst["g1"] = master.group1;
-  mst["g2"] = master.group2;
-  mst["a1"] = master.aux1;
-  mst["a2"] = master.aux2;
+  mst["lrL"] = master.lrL; mst["lrR"] = master.lrR;
+  mst["g1"] = master.group1; mst["g2"] = master.group2;
+  mst["a1"] = master.aux1; mst["a2"] = master.aux2;
 
-  // Legacy DSP
-  doc["Il"] = InputLevel;
-  doc["Ol"] = OutputLevel;
-  doc["Clip"] = Clipper;
-  doc["Comp"] = Compressor;
-  doc["Sync"] = BandSync;
-  doc["Mute"] = Mute;
-  doc["Res1"] = Reserved1;
-  doc["Res2"] = Reserved2;
-  doc["Nb"] = NumBands;
-  doc["PreE"] = PreEmphasis;
-  doc["PostE"] = PostEmphasis;
-  doc["Step"] = StepBy;
-  doc["Echo"] = Echo;
-  doc["Fqf"] = FiltersQFactor;
+  doc["Il"] = InputLevel; doc["Ol"] = OutputLevel;
+  doc["Clip"] = Clipper; doc["Comp"] = Compressor;
+  doc["Sync"] = BandSync; doc["Mute"] = Mute;
+  doc["Res1"] = Reserved1; doc["Res2"] = Reserved2;
+  doc["Nb"] = NumBands; doc["PreE"] = PreEmphasis;
+  doc["PostE"] = PostEmphasis; doc["Step"] = StepBy;
+  doc["Echo"] = Echo; doc["Fqf"] = FiltersQFactor;
   doc["Tz"] = TimeZone;
   JsonArray Eq = doc.createNestedArray("Eq");
   JsonArray Prot = doc.createNestedArray("Prot");
@@ -453,16 +427,13 @@ bool saveConfig() {
   JsonArray Rls = doc.createNestedArray("Rls");
   for (int i = 0; i < ALL_NUM_BANDS; i++) {
     if (i < MAX_NUM_BANDS) Eq.add(Equalizer[i]);
-    Prot.add(Protection[i]);
-    Gn.add(Gain[i]);
-    Atk.add(AttackTime[i]);
-    Rls.add(ReleaseTime[i]);
+    Prot.add(Protection[i]); Gn.add(Gain[i]);
+    Atk.add(AttackTime[i]); Rls.add(ReleaseTime[i]);
   }
   JsonArray inTrimArr = doc.createNestedArray("InTrim");
   JsonArray inMuteArr = doc.createNestedArray("InMute");
   for (int ch = 0; ch < NUM_PHYS_IN; ch++) {
-    inTrimArr.add(inTrim[ch]);
-    inMuteArr.add(inMute[ch]);
+    inTrimArr.add(inTrim[ch]); inMuteArr.add(inMute[ch]);
   }
 
   String output;
@@ -476,7 +447,6 @@ bool saveConfig() {
   }
 }
 
-// Simple per-channel compressor using hard knee
 static inline void applyCompressor(float &sample, const CompressorParams &comp, float &gainState) {
   float absS = fabs(sample);
   float threshLin = decibel_2_linear(comp.threshold);
@@ -495,59 +465,46 @@ void audioTask(void *pvParameters) {
   float compGainState[NUM_MIX_CH] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
   while (true) {
-    i2sCodec0.readBlock();
-    i2sCodec1.readBlock();
+    i2sCodec.readBlock();
 
     for (int i = 0; i < AudioDriver::BufferSize; i++) {
-      // Read 4 physical inputs
-      float physIn[4];
-      physIn[0] = i2sCodec0.readSample(i, 0);
-      physIn[1] = i2sCodec0.readSample(i, 1);
-      physIn[2] = i2sCodec1.readSample(i, 0);
-      physIn[3] = i2sCodec1.readSample(i, 1);
+      float physInL = i2sCodec.readSample(i, 0);
+      float physInR = i2sCodec.readSample(i, 1);
 
-      // Apply input trim
-      for (int p = 0; p < NUM_PHYS_IN; p++) {
-        physIn[p] *= inTrimLinear[p];
-        if (inMute[p]) physIn[p] = 0.0f;
-      }
+      physInL *= inTrimLinear[0] * InputLevelLinear;
+      physInR *= inTrimLinear[1] * InputLevelLinear;
+      if (inMute[0]) physInL = 0;
+      if (inMute[1]) physInR = 0;
 
-      // Build 8-channel mix buffer (ch 0-3 = physical, 4-7 = software)
       float mixSamples[NUM_MIX_CH] = {0};
-      for (int ch = 0; ch < NUM_PHYS_IN; ch++) {
-        mixSamples[ch] = physIn[ch];
-      }
+      mixSamples[0] = physInL;
+      mixSamples[1] = physInR;
 
-      // Accumulate bus sums
-      float busSums[NUM_BUSES] = {0, 0, 0, 0};
+      float busSums[NUM_BUSES] = {0, 0, 0, 0, 0};
 
       for (int ch = 0; ch < NUM_MIX_CH; ch++) {
         float s = mixSamples[ch];
         if (channels[ch].mute) s = 0;
 
-        // Per-channel compressor
         applyCompressor(s, channels[ch].comp, compGainState[ch]);
 
-        // Reverb (high shelf >10kHz - simplified as highpass mix)
         float revSig = s;
         if (channels[ch].reverb > 0.01f) {
           revSig = s * 0.3f;
           s = s * (1.0f - channels[ch].reverb * 0.5f) + revSig * channels[ch].reverb * 0.5f;
         }
 
-        // Route to buses
         busSums[BUS_LR] += s * channels[ch].send.lr;
         busSums[BUS_GROUP1] += s * channels[ch].send.group1;
         busSums[BUS_GROUP2] += s * channels[ch].send.group2;
         busSums[BUS_AUX1] += s * channels[ch].send.aux1;
         busSums[BUS_AUX2] += s * channels[ch].send.aux2;
 
-        // Track VU
         float peak = getPeak(s);
         if (peak > chVuPeak[ch]) chVuPeak[ch] = peak;
       }
 
-      // --- Main L/R bus: full multiband DSP ---
+      // Main L/R bus multiband DSP
       float mainL = 0, mainR = 0;
       inputSampleR = busSums[BUS_LR] * master.lrL * 0.5f;
       inputSampleL = busSums[BUS_LR] * master.lrR * 0.5f;
@@ -584,24 +541,17 @@ void audioTask(void *pvParameters) {
       mainL = constrain(mainL, Clipper_Linear_n, Clipper_Linear_p);
 
       if (Mute || ForcedMute) {
-        mainR = 0.f;
-        mainL = 0.f;
+        mainR = 0.f; mainL = 0.f;
       } else {
         mainR *= OutputLevelLinearR;
         mainL *= OutputLevelLinearL;
       }
 
-      // --- Other buses: simple level ---
-      float outG1 = busSums[BUS_GROUP1] * master.group1;
-      float outG2 = busSums[BUS_GROUP2] * master.group2;
-      outG1 = constrain(outG1, -COMP_LIMIT, COMP_LIMIT);
-      outG2 = constrain(outG2, -COMP_LIMIT, COMP_LIMIT);
-
-      // Track bus VU
       float pL = getPeak(mainL), pR = getPeak(mainR);
       if (pL > masterVuPeakL) masterVuPeakL = pL;
       if (pR > masterVuPeakR) masterVuPeakR = pR;
-      float pg1 = getPeak(outG1), pg2 = getPeak(outG2);
+      float pg1 = getPeak(busSums[BUS_GROUP1]);
+      float pg2 = getPeak(busSums[BUS_GROUP2]);
       if (pg1 > busVuPeak[BUS_GROUP1]) busVuPeak[BUS_GROUP1] = pg1;
       if (pg2 > busVuPeak[BUS_GROUP2]) busVuPeak[BUS_GROUP2] = pg2;
       float pa1 = getPeak(busSums[BUS_AUX1]);
@@ -609,15 +559,13 @@ void audioTask(void *pvParameters) {
       if (pa1 > busVuPeak[BUS_AUX1]) busVuPeak[BUS_AUX1] = pa1;
       if (pa2 > busVuPeak[BUS_AUX2]) busVuPeak[BUS_AUX2] = pa2;
 
-      // Write outputs: I2S0 = L/R main, I2S1 = Group1/Group2
-      i2sCodec0.writeStereoSample(mainR, mainL, i);
-      i2sCodec1.writeStereoSample(outG2, outG1, i);
+      i2sCodec.writeStereoSample(mainR, mainL, i);
     }
 
-    i2sCodec0.writeBlock();
-    i2sCodec1.writeBlock();
+    i2sCodec.writeBlock();
     updateVuBroadcast();
     esp_task_wdt_reset();
+    vTaskDelay(1);
   }
 }
 

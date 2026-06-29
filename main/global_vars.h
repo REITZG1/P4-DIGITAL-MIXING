@@ -51,8 +51,8 @@ extern float Equalizer_Linear[MAX_NUM_BANDS];
 extern float Post_Emphasis_Linear[MAX_NUM_BANDS];
 extern float Clipper_Linear_p;
 extern float Clipper_Linear_n;
-extern AudioDriver i2sCodec0;
-extern AudioDriver i2sCodec1;
+
+extern AudioDriver i2sCodec;
 extern DualCompressor comp_st[MAX_NUM_BANDS];
 extern DualCompressor limiter_st;
 extern YummyDSP dspBAND[MAX_NUM_BANDS];
@@ -62,6 +62,7 @@ extern FilterNode LPF_BAND[MAX_NUM_BANDS];
 extern FilterNode HPF_BAND[MAX_NUM_BANDS];
 extern FilterNode LPF_FM_FILTER[NumFmFilters];
 extern DelayNode ECHO;
+
 extern float InputLevelLinear;
 extern float OutputLevelLinearL;
 extern float OutputLevelLinearR;

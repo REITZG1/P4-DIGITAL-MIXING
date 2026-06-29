@@ -138,6 +138,10 @@ protected:
   int mclkPin;
   int lshift = 8;
   i2s_port_t i2sPort;
+#if !CONFIG_IDF_TARGET_ESP32P4
+  i2s_config_t i2s_config;
+  i2s_pin_config_t pin_config;
+#endif
   int i2sBufferSize;
   int32_t* i2sReadBuffer;
   int32_t* i2sWriteBuffer;

@@ -54,13 +54,12 @@ int AudioDriver::setPins(int bitClkPin, int lrClkPin, int dataOutPin, int dataIn
     }
   };
 #else
-  i2s_pin_config_t pin_config = {
+  pin_config = {
     .bck_io_num = bitClkPin,
     .ws_io_num = lrClkPin,
     .data_out_num = dataOutPin,
     .data_in_num = dataInPin
   };
-  i2s_set_pin(i2sPort, &pin_config);
 #endif
   this->enablePin = enablePin;
   this->mclkPin = mclkPin;
@@ -139,6 +138,8 @@ bool AudioDriver::start() {
 #else
   err = i2s_driver_install(i2sPort, &i2s_config, 0, NULL);
   if (err != ESP_OK) return false;
+  err = i2s_set_pin(i2sPort, &pin_config);
+  if (err != ESP_OK) return false;
 #endif
 
   i2sBufferSize = BufferSize * chCount;
@@ -180,11 +181,17 @@ int AudioDriver::readBlock() {
     return 0;
   }
 #else
-  err = i2s_read(i2sPort, i2sReadBuffer, i2sBufferSize * sizeof(int32_t), &bytesRead, portMAX_DELAY);
+  err = i2s_read(i2sPort, i2sReadBuffer, i2sBufferSize * sizeof(int32_t), &bytesRead, pdMS_TO_TICKS(100));
 #endif
 
-  if (err != ESP_OK) return -1;
-  if (bytesRead < i2sBufferSize * sizeof(int32_t)) return -1;
+  if (err != ESP_OK) {
+    memset(i2sReadBuffer, 0, i2sBufferSize * sizeof(int32_t));
+    return 0;
+  }
+  if (bytesRead < i2sBufferSize * sizeof(int32_t)) {
+    memset(i2sReadBuffer, 0, i2sBufferSize * sizeof(int32_t));
+    return 0;
+  }
   return 0;
 }
 
@@ -199,7 +206,7 @@ int AudioDriver::writeBlock() {
     return -1;
   }
 #else
-  err = i2s_write(i2sPort, i2sWriteBuffer, i2sBufferSize * sizeof(int32_t), &bytesWritten, portMAX_DELAY);
+  err = i2s_write(i2sPort, i2sWriteBuffer, i2sBufferSize * sizeof(int32_t), &bytesWritten, pdMS_TO_TICKS(100));
 #endif
 
   if (err != ESP_OK) return -1;
