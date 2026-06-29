@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Mixer ESP32-P4</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      padding: 10px 20px;
+      background: #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status {
+      font-size: 0.9rem;
+    }
+    main {
+      padding: 10px;
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      overflow-x: auto;
+    }
+    .panel {
+      background: #1b1b1b;
+      padding: 10px;
+      border-radius: 8px;
+      min-width: 220px;
+    }
+    .panel h2, .panel h3 {
+      margin: 4px 0;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 3px 0;
+      gap: 5px;
+    }
+    .slider-row label {
+      flex: 0 0 70px;
+      font-size: 0.8rem;
+    }
+    .slider-row input[type=range] {
+      flex: 1;
+    }
+    .slider-row span.value {
+      width: 40px;
+      text-align: right;
+      font-size: 0.8rem;
+    }
+    .vu {
+      width: 24px;
+      height: 120px;
+      background: #333;
+      border-radius: 4px;
+      margin: 5px auto;
+      position: relative;
+      overflow: hidden;
+    }
+    .vu-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(to top, #0f0, #ff0, #f00);
+      height: 0%;
+    }
+    .channel-strip {
+      min-width: 260px;
+    }
+    .section-title {
+      font-size: 0.8rem;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      border-top: 1px solid #333;
+      padding-top: 4px;
+      text-align: center;
+      opacity: 0.8;
+    }
+    input[type=range] {
+      accent-color: #0af;
+    }
+    small {
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>ESP32-P4 Digital Mixer (8 Channel)</div>
+  <div class="status" id="wsStatus">WS: disconnected</div>
+</header>
+
+<main>
+  <!-- Panel Master -->
+  <div class="panel" id="masterPanel">
+    <h2>MASTER</h2>
+
+    <div class="vu" data-vu="masterL">
+      <div class="vu-fill"></div>
+    </div>
+    <div style="text-align:center;font-size:0.8rem;">L</div>
+
+    <div class="vu" data-vu="masterR">
+      <div class="vu-fill"></div>
+    </div>
+    <div style="text-align:center;font-size:0.8rem;">R</div>
+
+    <h3>Master L/R</h3>
+    <div class="slider-row">
+      <label>Out L</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="lrL">
+      <span class="value">0.80</span>
+    </div>
+    <div class="slider-row">
+      <label>Out R</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="lrR">
+      <span class="value">0.80</span>
+    </div>
+
+    <h3>Group</h3>
+    <div class="slider-row">
+      <label>Group 1</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="group1">
+      <span class="value">0.80</span>
+    </div>
+    <div class="slider-row">
+      <label>Group 2</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="group2">
+      <span class="value">0.80</span>
+    </div>
+
+    <h3>Aux</h3>
+    <div class="slider-row">
+      <label>Aux 1</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="aux1">
+      <span class="value">0.80</span>
+    </div>
+    <div class="slider-row">
+      <label>Aux 2</label>
+      <input type="range" min="0" max="1" step="0.01" data-master="aux2">
+      <span class="value">0.80</span>
+    </div>
+
+    <h3>VU Bus Lain</h3>
+    <div class="vu" data-vu="group1"><div class="vu-fill"></div></div>
+    <div style="text-align:center;font-size:0.8rem;">Group 1</div>
+
+    <div class="vu" data-vu="group2"><div class="vu-fill"></div></div>
+    <div style="text-align:center;font-size:0.8rem;">Group 2</div>
+
+    <div class="vu" data-vu="aux1"><div class="vu-fill"></div></div>
+    <div style="text-align:center;font-size:0.8rem;">Aux 1</div>
+
+    <div class="vu" data-vu="aux2"><div class="vu-fill"></div></div>
+    <div style="text-align:center;font-size:0.8rem;">Aux 2</div>
+
+    <p style="font-size:0.7rem;opacity:0.7;">
+      <b>Catatan:</b> slider ini ngirim kontrol ke DSP di ESP, audio fisiknya tetap lewat PCM1808/PCM5102 sesuai wiring.
+    </p>
+  </div>
+
+  <!-- Panel Channel akan di-generate lewat JS -->
+  <div id="channelsContainer" style="display:flex;gap:10px;"></div>
+</main>
+
+<script>
+  const NUM_CHANNELS = 8;
+  const NUM_EQ_BANDS = 15;
+
+  const state = {
+    master: {
+      lrL: 0.8,
+      lrR: 0.8,
+      group1: 0.8,
+      group2: 0.8,
+      aux1: 0.8,
+      aux2: 0.8
+    },
+    channels: []
+  };
+
+  for (let ch = 0; ch < NUM_CHANNELS; ch++) {
+    state.channels.push({
+      eq: new Array(NUM_EQ_BANDS).fill(0.0),    // dB
+      send: {
+        lr: 1.0,
+        group1: 0.0,
+        group2: 0.0,
+        aux1: 0.0,
+        aux2: 0.0
+      },
+      reverb: 0.0,
+      comp: {
+        ratio: 2.0,
+        attack: 10.0,
+        release: 200.0,
+        threshold: -20.0,
+        gain: 0.0
+      }
+    });
+  }
+
+  // ================== Render Channel Strip ==================
+
+  const channelsContainer = document.getElementById('channelsContainer');
+
+  function createSliderRow(labelText, min, max, step, initValue, onChange) {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    row.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = min;
+    input.max = max;
+    input.step = step;
+    input.value = initValue;
+    row.appendChild(input);
+
+    const span = document.createElement('span');
+    span.className = 'value';
+    span.textContent = initValue.toFixed(2);
+    row.appendChild(span);
+
+    input.addEventListener('input', () => {
+      const v = parseFloat(input.value);
+      span.textContent = (max - min > 2) ? v.toFixed(0) : v.toFixed(2);
+      onChange(v);
+      scheduleSend();
+    });
+
+    return row;
+  }
+
+  function createChannelStrip(chIndex) {
+    const panel = document.createElement('div');
+    panel.className = 'panel channel-strip';
+
+    const title = document.createElement('h2');
+    title.textContent = 'CH ' + (chIndex + 1);
+    panel.appendChild(title);
+
+    const vu = document.createElement('div');
+    vu.className = 'vu';
+    vu.dataset.vu = 'ch' + chIndex;
+    const vuFill = document.createElement('div');
+    vuFill.className = 'vu-fill';
+    vu.appendChild(vuFill);
+    panel.appendChild(vu);
+
+    // ====== EQ 15 band (Low / Mid / High grouping) ======
+    const eqTitle = document.createElement('div');
+    eqTitle.className = 'section-title';
+    eqTitle.textContent = 'EQ 15-Band';
+    panel.appendChild(eqTitle);
+
+    const freqs = [
+      31, 63, 125, 250, 500,
+      1000, 2000, 4000, 6000, 8000,
+      10000, 12000, 14000, 16000, 18000
+    ];
+
+    freqs.forEach((f, idx) => {
+      const row = createSliderRow(
+        f + ' Hz',
+        -12, 12, 0.5, 0.0,
+        (val) => { state.channels[chIndex].eq[idx] = val; }
+      );
+      panel.appendChild(row);
+    });
+
+    // ====== Routing ke bus ======
+    const routingTitle = document.createElement('div');
+    routingTitle.className = 'section-title';
+    routingTitle.textContent = 'Routing (Send Level)';
+    panel.appendChild(routingTitle);
+
+    panel.appendChild(createSliderRow('To L/R', 0, 1, 0.01, 1.0,
+      v => state.channels[chIndex].send.lr = v));
+    panel.appendChild(createSliderRow('To Group1', 0, 1, 0.01, 0.0,
+      v => state.channels[chIndex].send.group1 = v));
+    panel.appendChild(createSliderRow('To Group2', 0, 1, 0.01, 0.0,
+      v => state.channels[chIndex].send.group2 = v));
+    panel.appendChild(createSliderRow('To Aux1', 0, 1, 0.01, 0.0,
+      v => state.channels[chIndex].send.aux1 = v));
+    panel.appendChild(createSliderRow('To Aux2', 0, 1, 0.01, 0.0,
+      v => state.channels[chIndex].send.aux2 = v));
+
+    // ====== Reverb ======
+    const revTitle = document.createElement('div');
+    revTitle.className = 'section-title';
+    revTitle.textContent = 'Reverb (High >10kHz)';
+    panel.appendChild(revTitle);
+
+    panel.appendChild(createSliderRow('Amount', 0, 1, 0.01, 0.0,
+      v => state.channels[chIndex].reverb = v));
+
+    // ====== Compressor ======
+    const compTitle = document.createElement('div');
+    compTitle.className = 'section-title';
+    compTitle.textContent = 'Compressor';
+    panel.appendChild(compTitle);
+
+    panel.appendChild(createSliderRow('Ratio', 1, 10, 0.1, 2.0,
+      v => state.channels[chIndex].comp.ratio = v));
+    panel.appendChild(createSliderRow('Attack (ms)', 0, 100, 1, 10,
+      v => state.channels[chIndex].comp.attack = v));
+    panel.appendChild(createSliderRow('Release (ms)', 10, 1000, 10, 200,
+      v => state.channels[chIndex].comp.release = v));
+    panel.appendChild(createSliderRow('Thresh (dB)', -60, 0, 1, -20,
+      v => state.channels[chIndex].comp.threshold = v));
+    panel.appendChild(createSliderRow('Gain (dB)', -12, 12, 0.5, 0,
+      v => state.channels[chIndex].comp.gain = v));
+
+    return panel;
+  }
+
+  for (let ch = 0; ch < NUM_CHANNELS; ch++) {
+    channelsContainer.appendChild(createChannelStrip(ch));
+  }
+
+  // ================== Master slider binding ==================
+
+  document.querySelectorAll('#masterPanel input[type=range]').forEach(input => {
+    const key = input.dataset.master;
+    input.value = state.master[key];
+    const span = input.parentElement.querySelector('.value');
+    span.textContent = state.master[key].toFixed(2);
+
+    input.addEventListener('input', () => {
+      const v = parseFloat(input.value);
+      state.master[key] = v;
+      span.textContent = v.toFixed(2);
+      scheduleSend();
+    });
+  });
+
+  // ================== WebSocket ==================
+
+  let ws = null;
+  let sendTimer = null;
+
+  function connectWS() {
+    const statusEl = document.getElementById('wsStatus');
+    const url = 'ws://192.168.4.1/ws'; // ganti kalau IP ESP beda
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      statusEl.textContent = 'WS: connected';
+      statusEl.style.color = '#0f0';
+      sendParams(); // kirim state awal
+    };
+
+    ws.onclose = () => {
+      statusEl.textContent = 'WS: disconnected';
+      statusEl.style.color = '#f00';
+      setTimeout(connectWS, 2000);
+    };
+
+    ws.onerror = () => {
+      statusEl.textContent = 'WS: error';
+      statusEl.style.color = '#ff0';
+    };
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'vu') {
+          updateVuFromMsg(msg);
+        }
+      } catch (e) {
+        console.warn('invalid msg', e);
+      }
+    };
+  }
+
+  function scheduleSend() {
+    if (sendTimer) return;
+    sendTimer = setTimeout(() => {
+      sendTimer = null;
+      sendParams();
+    }, 50); // debouncing
+  }
+
+  function sendParams() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const payload = {
+      type: 'set',
+      master: state.master,
+      channels: state.channels
+    };
+    ws.send(JSON.stringify(payload));
+  }
+
+  function updateVuFromMsg(msg) {
+    // channel VU
+    msg.channels.forEach((val, idx) => {
+      const vu = document.querySelector('.vu[data-vu="ch' + idx + '"] .vu-fill');
+      if (vu) vu.style.height = (val * 100).toFixed(1) + '%';
+    });
+
+    // bus VU
+    const bus = msg.bus || {};
+    ['masterL','masterR','group1','group2','aux1','aux2'].forEach(key => {
+      const vu = document.querySelector('.vu[data-vu="' + key + '"] .vu-fill');
+      if (vu && typeof bus[key] === 'number') {
+        vu.style.height = (bus[key] * 100).toFixed(1) + '%';
+      }
+    });
+  }
+
+  connectWS();
+</script>
+</body>
+</html>
