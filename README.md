@@ -1,147 +1,104 @@
-# ESP32-P4 Digital Audio Mixer
+# ESP32 Digital Audio Mixer (8-Ch WebSocket)
 
-Multiband DSP audio mixer berbasis ESP32-P4 (RISC-V) dengan equalizer, kompresor, echo, dan kontrol serial.
+8-channel digital audio mixer untuk **ESP32** (bukan P4), porting dari versi ESP32-P4. Fitur: 15-band EQ, compressor, reverb, 5-bus routing, kontrol via WebSocket dan Serial.
 
 ## Fitur
 
-- Multiband DSP processor (1-10 band)
-- Graphic equalizer per-band
-- Stereo compressor dengan attack/release control
-- Audio echo/delay
-- Balance control
-- Pre-emphasis dan Post-emphasis
-- Output peak protection
-- Konfigurasi via Serial terminal
-- Penyimpanan konfigurasi ke SPIFFS
+- 8-channel mixing dengan 5 bus (L/R, Group 1/2, Aux 1/2)
+- 15-band graphic equalizer per channel (31Hz-18kHz)
+- Compressor per channel (ratio, attack, release, threshold, gain)
+- Reverb per channel
+- 2 physical input (I2S ADC), 2 physical output (I2S DAC)
+- Multiband DSP processor pada main bus (1-10 band)
+- Kontrol via WebSocket (web UI) dan Serial terminal
+- WiFi Access Point + Station mode
+- Konfigurasi tersimpan di SPIFFS
 
 ## Hardware Requirements
 
-- ESP32-P4 DevKit board
+- ESP32 DevKit board (ESP32-WROOM, ESP32-WROVER, dll)
 - PCM5102A DAC (I2S output)
-- PCM1802 ADC (I2S input) atau STM32F411 USB Audio
-- Power supply via USB-C
+- PCM1808 ADC (I2S input)
+- Power supply via USB
 
-### Pin Connections (ESP32-P4)
+### Pin Connections (ESP32 DevKit)
 
 | Signal | GPIO Pin |
 |--------|----------|
-| I2S0_BCK  | GPIO5  |
-| I2S0_LRCK | GPIO6  |
-| I2S0_DOUT | GPIO7  |
-| I2S0_DIN  | GPIO4  |
-| CODEC_EN  | GPIO8  |
-| MCLK      | GPIO21 |
+| I2S_BCK    | GPIO26 |
+| I2S_LRCLK  | GPIO27 |
+| I2S_DOUT   | GPIO25 |
+| I2S_DIN    | GPIO33 |
+| CODEC_EN   | NC     |
+| MCLK       | NC     |
 
 *Sesuaikan pin dengan board Anda.*
 
+### ESP32 vs ESP32-P4
+
+| Fitur | ESP32 (ini) | ESP32-P4 (original) |
+|-------|-------------|---------------------|
+| CPU | Xtensa dual-core 240MHz | RISC-V dual-core 400MHz |
+| WiFi/BT | **Ya** (built-in) | Tidak (via C6 coprocessor) |
+| I2S ports | 1 | 2 |
+| Phys I/O | 2 in / 2 out | 4 in / 4 out |
+| PSRAM | Opsional (8MB max) | Hingga 32MB |
+
 ## Cara Kompilasi
 
-### Opsi 1: PlatformIO (Recommended)
+### PlatformIO (Recommended)
 
 ```bash
-# Install PlatformIO
-pip install platformio
-
 # Build
-cd /mnt/sdcard/mixer
-pio run -e esp32-p4
+pio run -e esp32dev
 
 # Flash ke board
-pio run -t upload -e esp32-p4
+pio run -t upload -e esp32dev
 
 # Monitor serial
 pio device monitor -b 115200
 ```
 
-### Opsi 2: Arduino IDE
+### Arduino IDE
 
-1. Install ESP32 Arduino Core v3.x dari Boards Manager
-2. Tambahkan URL Board: `https://espressif.github.io/arduino-esp32/package_esp32_index.json`
-3. Install library:
-   - ArduinoJson (via Library Manager)
-   - YummyDSP: `git clone https://github.com/junon10/yummyDSP`
-   - AudioDriver: `git clone https://github.com/junon10/STM32F411_USB_AUDIO_DAC`
-4. Board: ESP32-P4-DevKit atau Generic ESP32-P4
-5. Partitions: Minimal SPIFFS (1.9MB APP / 1.5MB SPIFFS)
-6. Flash Size: 16MB
-7. Upload Speed: 921600
+1. Install ESP32 Arduino Core dari Boards Manager
+2. Install library: ArduinoJson (via Library Manager)
+3. Board: ESP32 Dev Module atau Generic ESP32
+4. Partition: Minimal SPIFFS (1.9MB APP / 1.5MB SPIFFS)
+5. Flash Size: 4MB
+6. Upload Speed: 115200
 
-### Opsi 3: ESP-IDF
+## Kontrol via Web
 
-```bash
-idf.py set-target esp32p4
-idf.py menuconfig
-idf.py build
-idf.py -p /dev/ttyACM0 flash
-```
-
-## Output HEX/BIN
-
-Setelah kompilasi, file firmware ada di:
-
-- PlatformIO: `.pio/build/esp32-p4/firmware.bin`
-- Arduino IDE: biasanya di folder build output
-- Copy ke `firmware/release/` untuk production
-
-### Flashing Manual
-
-```bash
-python esptool.py --chip esp32p4 --port /dev/ttyACM0 --baud 921600 \
-  write_flash 0x0 firmware/release/audio_mixer_p4_merged.bin
-```
+1. Colok ESP32 ke USB
+2. Cari WiFi `AudioMixer-8ch` (password: `mixer1234`)
+3. Buka browser ke `http://192.168.4.1`
+4. Kontrol channel EQ, routing, compressor, reverb, dan master level
 
 ## Kontrol via Serial
 
-Konek via serial monitor (115200 baud), lalu ketik:
-
-| Perintah | Fungsi |
-|----------|--------|
-| `menu`   | Tampilkan menu |
-| `status` | Tampilkan status sistem |
-| `1`      | Set Input Level |
-| `2`      | Set Output Level |
-| `3`      | Set Balance |
-| `5`      | Toggle Compressor ON/OFF |
-| `6`      | Toggle Mute ON/OFF |
-| `7`      | Set Number of Bands |
-| `17`     | Save config to SPIFFS |
-| `18`     | Reset to default settings |
-| `19+`    | Adjust individual EQ bands |
+Konek via serial monitor (115200 baud), ketik `menu` untuk daftar perintah.
 
 ## Struktur Folder
 
 ```
-/mnt/sdcard/mixer/
-├── audio_mixer_p4.ino    # Main Arduino sketch
-├── platformio.ini         # PlatformIO config
-├── README.md              # File ini
-├── src/
-│   ├── settings.h         # Constants & pin definitions
-│   ├── global_vars.h      # Global variables & audio task
-│   ├── DualCompressor.h   # Compressor implementation
-│   └── serial_cmd.h       # Serial command interface
-├── libraries/             # Dependency libraries
-│   ├── YummyDSP/
-│   ├── AudioDriver/
-│   └── ArduinoJson/
-├── data/                  # SPIFFS data files
-└── firmware/
-    ├── debug/             # Debug firmware binaries
-    ├── release/           # Release firmware binaries
-    └── README.txt
+├── main/
+│   ├── audio_mixer_p4.cpp    # Main program (setup, tasks)
+│   ├── settings.h             # Constants, pin definitions
+│   ├── global_vars.h/cpp      # Global state, audio DSP task
+│   ├── DualCompressor.h       # Stereo compressor implementation
+│   ├── serial_cmd.h           # Serial command interface
+│   ├── web_server.h/cpp       # HTTP server, WebSocket, WiFi
+├── components/yummydsp/       # YummyDSP library (ESP-IDF)
+├── libraries/YummyDSP/        # YummyDSP library (Arduino)
+├── platformio.ini             # PlatformIO config
+├── partitions.csv             # Partition table
+├── sdkconfig.defaults         # Default sdkconfig
+└── README.md
 ```
-
-## Catatan ESP32-P4
-
-- ESP32-P4 adalah RISC-V dual-core @400MHz
-- **TIDAK** memiliki WiFi/BT (berbeda dengan ESP32 biasa)
-- Memiliki PSRAM hingga 32MB
-- Menggunakan I2S0 untuk audio
-- Arduino core support: experimental (v3.1+)
-- Untuk production: gunakan ESP-IDF 5.3+
 
 ## Credits
 
-- Base project: https://github.com/junon10/esp32-multiband-dsp
+- Project asli oleh Junon M. (ESP32-P4): https://github.com/junon10/esp32-multiband-dsp
 - DSP Library: YummyDSP by Junon M.
-- Audio Driver by Junon M.
+- Port ke ESP32: REITZG1

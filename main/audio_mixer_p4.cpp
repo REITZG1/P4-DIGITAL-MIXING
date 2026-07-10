@@ -2,6 +2,7 @@
 #include "driver/gpio.h"
 #include "esp_task_wdt.h"
 #include <Preferences.h>
+#include <sdkconfig.h>
 #include <YummyDSP.h>
 #include <AudioDriver.h>
 
@@ -24,7 +25,16 @@ void webTask(void *pvParameters) {
 }
 
 void setup() {
+#if CONFIG_IDF_TARGET_ESP32P4
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = (uint32_t)WDT_TIMEOUT * 1000,
+    .idle_core_mask = 0,
+    .trigger_panic = true
+  };
+  esp_task_wdt_init(&wdt_config);
+#else
   esp_task_wdt_init(WDT_TIMEOUT, true);
+#endif
   // Note: do NOT add loopTask to WDT — worker tasks subscribe themselves
   Serial.begin(115200);
   delay(500);
@@ -56,6 +66,13 @@ void setup() {
   bool ok = i2sCodec.start();
   Serial.printf("\nI2S %s\n", ok ? "started successfully!" : "FAILED!");
 
+  if (ok) {
+    xTaskCreatePinnedToCore(audioTask, "audioTask", 16384, NULL, 10, NULL, 1);
+    delay(500);
+  } else {
+    Serial.println("WARNING: I2S failed. Audio processing disabled.");
+  }
+
   Serial.println();
   Serial.println("System ready! Type 'menu' for commands.");
   Serial.println();
@@ -64,8 +81,6 @@ void setup() {
   initWiFi();
   startWebServer();
   Serial.println("Web server started! Connect to WiFi AP 'AudioMixer-8ch' or check router for IP.");
-
-  xTaskCreatePinnedToCore(audioTask, "audioTask", 8192, NULL, 10, NULL, 1);
   delay(500);
   xTaskCreatePinnedToCore(serialCommTask, "serialCommTask", 4096, NULL, 6, NULL, 0);
   delay(500);
