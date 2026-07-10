@@ -342,6 +342,7 @@ static const char* HTML_INDEX = R"rawliteral(
     <div class="info-box">
       <b>Info Routing:</b> Slider UI mengontrol pemrosesan DSP internal di ESP. Jalur audio analog dikonfigurasi melalui PCM1808/PCM5102.
     </div>
+    </div>
   </div>
 
   <div id="channelsContainer"></div>

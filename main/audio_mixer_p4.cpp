@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "driver/gpio.h"
 #include "esp_task_wdt.h"
+#include "esp_log.h"
 #include <Preferences.h>
 #include <sdkconfig.h>
 #include <YummyDSP.h>
@@ -35,12 +36,11 @@ void setup() {
 #else
   esp_task_wdt_init(WDT_TIMEOUT, true);
 #endif
-  // Note: do NOT add loopTask to WDT — worker tasks subscribe themselves
   Serial.begin(115200);
   delay(500);
   Serial.println();
   Serial.println("===========================================");
-  Serial.println("  8-CH DIGITAL AUDIO MIXER - ESP32");
+  Serial.println("  8-CH DIGITAL AUDIO MIXER - ESP32-P4");
   Serial.println("  WebSocket Controlled v" + VERSION);
   Serial.println("===========================================");
   Serial.println();
@@ -60,7 +60,7 @@ void setup() {
   Serial.printf("  BCK=%d LRCK=%d DOUT=%d DIN=%d\n",
     I2S_BCK_PIN, I2S_LRCLK_PIN, I2S_DOUT_PIN, I2S_DIN_PIN);
 
-  i2sCodec.setI2sPort(I2S_NUM_0);
+  i2sCodec.setI2sPort(I2S_PORT);
   i2sCodec.setFormat(SampleRateFreq, channelCount);
   i2sCodec.setPins(I2S_BCK_PIN, I2S_LRCLK_PIN, I2S_DOUT_PIN, I2S_DIN_PIN, CODEC_ENABLE_PIN, I2S0_MCLK_PIN);
   bool ok = i2sCodec.start();
@@ -77,10 +77,13 @@ void setup() {
   Serial.println("System ready! Type 'menu' for commands.");
   Serial.println();
 
+  Serial.printf("Free heap before WiFi: %u bytes\n", esp_get_free_heap_size());
+  esp_log_level_set("rpc_core", ESP_LOG_NONE);
   Serial.println("Starting WiFi...");
   initWiFi();
   startWebServer();
   Serial.println("Web server started! Connect to WiFi AP 'AudioMixer-8ch' or check router for IP.");
+
   delay(500);
   xTaskCreatePinnedToCore(serialCommTask, "serialCommTask", 4096, NULL, 6, NULL, 0);
   delay(500);
@@ -88,5 +91,5 @@ void setup() {
 }
 
 void loop() {
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  delay(1000);
 }

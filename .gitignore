@@ -1,0 +1,14 @@
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+*.o
+*.d
+*.elf
+*.map
+*.bin
+sdkconfig
+sdkconfig.h
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
