@@ -544,17 +544,26 @@ static const char* HTML_INDEX = R"rawliteral(
 </body></html>
 )rawliteral";
 
+static uint32_t lastVusend = 0;
+
 static esp_err_t ws_send_text(const char *text) {
   if (ws_client_fd < 0) return ESP_FAIL;
   httpd_ws_frame_t frame = {};
   frame.type = HTTPD_WS_TYPE_TEXT;
   frame.payload = (uint8_t*)text;
   frame.len = strlen(text);
-  return httpd_ws_send_frame_async(server, ws_client_fd, &frame);
+  esp_err_t ret = httpd_ws_send_frame_async(server, ws_client_fd, &frame);
+  if (ret != ESP_OK) {
+    ws_client_fd = -1;
+  }
+  return ret;
 }
 
 void webSocketBroadcastVu() {
   if (ws_client_fd < 0) return;
+  uint32_t now = millis();
+  if (now - lastVusend < 40) return;
+  lastVusend = now;
   taskENTER_CRITICAL(&wsMux);
   if (!wsStateChanged) { taskEXIT_CRITICAL(&wsMux); return; }
   wsStateChanged = false;
@@ -589,6 +598,10 @@ static esp_err_t ws_handler(httpd_req_t *req) {
   if (ret != ESP_OK) {
     if (ret == ESP_ERR_HTTPD_INVALID_REQ) ws_client_fd = -1;
     return ret;
+  }
+  if (frame.type == HTTPD_WS_TYPE_CLOSE) {
+    ws_client_fd = -1;
+    return ESP_OK;
   }
   if (frame.type == HTTPD_WS_TYPE_TEXT && frame.len > 0) {
     buf[frame.len] = 0;
