@@ -10,28 +10,36 @@ Uses Waveshare ESP32-P4-NANO board with C6 coprocessor for WiFi (SDIO).
 - 15-band graphic EQ per channel (31Hz–18kHz)
 - Compressor per channel (ratio, attack, release, threshold, gain)
 - Reverb per channel
-- 2 physical I2S inputs (PCM1808 ADC), 2 physical I2S outputs (PCM5102 DAC)
+- 8-channel TDM I2S input (4× PCM1808 ADC, 4 data lines)
+- 6-channel TDM I2S output (3× PCM5102 DAC, 3 data lines)
 - Multiband DSP processor on main bus (1–10 band)
-- WiFi AP + STA via ESP32-C6 coprocessor
+- WiFi AP + STA via ESP32-C6 coprocessor (SDIO)
 - WebSocket web UI + Serial terminal
 - SPIFFS configuration storage
 
 ## Hardware Requirements
 
 - Waveshare ESP32-P4-NANO (or any ESP32-P4 with C6 SDIO WiFi + I2S1 header)
-- PCM1808 ADC (I2S input), PCM5102 DAC (I2S output), CS8416 (S/PDIF input)
+- 4× PCM1808 ADC (I2S input), 3× PCM5102 DAC (I2S output)
+- 3× 74LVC1G125 clock buffer for BCK/LRCK/MCLK distribution
 - Power via USB-C
 
 ### I2S Pin Connections (ESP32-P4 external I2S1 header)
 
-| Signal | GPIO |
-|--------|------|
-| I2S_BCK   | GPIO22 |
-| I2S_LRCLK | GPIO23 |
-| I2S_DOUT  | GPIO20 |
-| I2S_DIN   | GPIO21 |
-| CODEC_EN  | 2     |
-| MCLK      | NC    |
+| Signal       | GPIO  | Function |
+|--------------|-------|----------|
+| MCLK         | 21    | Master clock to clock buffer |
+| BCK          | 22    | Bit clock to clock buffer / PCM1808/PCM5102 |
+| LRCK         | 25    | Frame sync (LR clock) to PCM1808/PCM5102 |
+| ADC_DIN0     | 45    | PCM1808 #1 DOUT (ch 1-2) |
+| ADC_DIN1     | 32    | PCM1808 #2 DOUT (ch 3-4) |
+| ADC_DIN2     | 36    | PCM1808 #3 DOUT (ch 5-6) |
+| ADC_DIN3     | 33    | PCM1808 #4 DOUT (ch 7-8) |
+| DAC_DOUT0    | 26    | PCM5102 #1 DIN (ch 1-2) |
+| DAC_DOUT1    | 24    | PCM5102 #2 DIN (ch 3-4) |
+| DAC_DOUT2    | 27    | PCM5102 #3 DIN (ch 5-6) |
+
+GPIO20 and GPIO23 are unused (I2S standard pins replaced by clock buffer + multi-data-line TDM).
 
 ### C6 SDIO Pins (internal, not on header)
 
