@@ -173,9 +173,9 @@ const int channelCount = 2;
 #if CONFIG_IDF_TARGET_ESP32P4
 // ESP32-P4: I2S1 on 40-pin header (I2S0 used by onboard ES8311)
 #define I2S_BCK_PIN       22   // Shared Bit Clock
-#define I2S_LRCLK_PIN     23   // Shared LR Clock (Word Select)
-#define I2S_DOUT_PIN      20   // DOUT → PCM5102 DIN (DAC)
-#define I2S_DIN_PIN       21   // DIN  ← PCM1808 DOUT (ADC)
+#define I2S_LRCLK_PIN     25   // Shared LR Clock (Word Select)
+#define I2S_DOUT_PIN      26   // DOUT → PCM5102 DIN (DAC)
+#define I2S_DIN_PIN       45   // DIN  ← PCM1808 DOUT (ADC)
 #define I2S_PORT          I2S_NUM_1
 #else
 // ESP32 DevKit + PCM1808/PCM5102 (shared BCK/LRCK)
@@ -186,7 +186,7 @@ const int channelCount = 2;
 #define I2S_PORT          I2S_NUM_0
 #endif
 #define CODEC_ENABLE_PIN  -1   // Not used
-#define I2S0_MCLK_PIN     -1   // Not used
+#define I2S0_MCLK_PIN     21   // MCLK output to clock buffer
 
 // WDT
 #define WDT_TIMEOUT 10
