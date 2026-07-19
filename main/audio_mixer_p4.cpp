@@ -80,9 +80,9 @@ void setup() {
   Serial.printf("Free heap before WiFi: %u bytes\n", esp_get_free_heap_size());
   esp_log_level_set("rpc_core", ESP_LOG_NONE);
   Serial.println("Starting WiFi...");
-  initWiFi();
+  initWiFi(); initEthernet();
   startWebServer();
-  Serial.println("Web server started! Connect to WiFi AP 'AudioMixer-8ch' or check router for IP.");
+  Serial.println("Web server started! Connect via WiFi AP 'AudioMixer-8ch' or use Ethernet IP.");
 
   delay(500);
   xTaskCreatePinnedToCore(serialCommTask, "serialCommTask", 4096, NULL, 6, NULL, 0);

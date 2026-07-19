@@ -2,6 +2,7 @@
 #include "global_vars.h"
 
 #include <WiFi.h>
+#include <ETH.h>
 #include <esp_log.h>
 #include <esp_http_server.h>
 #include <cstring>
@@ -97,8 +98,43 @@ static const char* HTML_INDEX = R"rawliteral(
       background: linear-gradient(135deg, var(--accent-route), var(--accent-reverb));
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 0 15px rgba(56,189,248,0.3);
+}
+
+esp_err_t initEthernet() {
+    ESP_LOGI(TAG, "Initializing Ethernet (Arduino)...");
+    // Register Ethernet events
+    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+        (void)info; // ignore unused info for Ethernet events
+        switch (event) {
+            case ARDUINO_EVENT_ETH_START:
+                ESP_LOGI(TAG, "ETH start");
+                ETH.setHostname("AudioMixer-8ch-ETH");
+                break;
+            case ARDUINO_EVENT_ETH_CONNECTED:
+                ESP_LOGI(TAG, "ETH link up");
+                break;
+            case ARDUINO_EVENT_ETH_GOT_IP:
+                ESP_LOGI(TAG, "Ethernet connected, IP: %s", ETH.localIP().toString().c_str());
+                break;
+            case ARDUINO_EVENT_ETH_DISCONNECTED:
+                ESP_LOGI(TAG, "ETH link down");
+                break;
+            case ARDUINO_EVENT_ETH_STOP:
+                ESP_LOGI(TAG, "ETH stopped");
+                break;
+            default:
+                break;
+        }
+    });
+    // Start Ethernet with default PHY (LAN8720) and default pins
+    if (!ETH.begin()) {
+        ESP_LOGE(TAG, "Failed to start Ethernet");
+        return ESP_FAIL;
     }
-    .brand-icon svg { width: 20px; height: 20px; stroke: #000; }
+    ESP_LOGI(TAG, "Ethernet init complete");
+    return ESP_OK;
+}
+
 
     .brand-text { line-height: 1.2; }
     .brand-text .title { font-weight: 700; font-size: 1rem; letter-spacing: 0.5px; }
