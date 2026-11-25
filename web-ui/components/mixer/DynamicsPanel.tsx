@@ -1,6 +1,7 @@
 "use client"
 
 import { SimpleGrid } from "@chakra-ui/react"
+import { memo } from "react"
 import { RotaryKnob } from "./RotaryKnob"
 import type { CompressorParameter, MixerAction, MixChannel } from "@/lib/mixer/model"
 
@@ -26,14 +27,9 @@ const parameters: Array<{
   { key: "gain", label: "Makeup", min: -12, max: 12, step: 0.5, format: (value) => `${value > 0 ? "+" : ""}${value.toFixed(1)} dB` },
 ]
 
-export function DynamicsPanel({
-  channel,
-  channelIndex,
-  dispatch,
-  disabled = false,
-}: DynamicsPanelProps) {
+function DynamicsPanelBase({ channel, channelIndex, dispatch, disabled = false }: DynamicsPanelProps) {
   return (
-    <SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }} gap="5">
+    <SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }} gap={{ base: 4, md: 6 }} justifyItems="center">
       {parameters.map((parameter) => (
         <RotaryKnob
           key={parameter.key}
@@ -57,3 +53,5 @@ export function DynamicsPanel({
     </SimpleGrid>
   )
 }
+
+export const DynamicsPanel = memo(DynamicsPanelBase)

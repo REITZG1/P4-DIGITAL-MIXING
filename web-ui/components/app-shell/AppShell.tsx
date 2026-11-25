@@ -2,48 +2,34 @@
 
 import {
   AudioLines,
-  CircleDot,
-  Gauge,
-  Pause,
-  Play,
+  ChevronRight,
   Save,
   Settings2,
   SlidersHorizontal,
-  Wifi,
-  WifiOff,
 } from "lucide-react"
 import {
-  Badge,
   Box,
   Button,
   Flex,
   Grid,
-  Heading,
   HStack,
   IconButton,
-  NativeSelect,
   Separator,
   SkipNavContent,
   SkipNavLink,
   Stack,
   Text,
-  VStack,
 } from "@chakra-ui/react"
-import { CHANNEL_COUNT } from "@/lib/mixer/model"
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill"
 import { Tooltip } from "@/components/ui/tooltip"
 
-export type MixerSelection = "master" | number
 export type ConnectionStatus = "demo" | "connecting" | "connected" | "offline"
 
 export interface AppShellProps {
   children: React.ReactNode
-  selected: MixerSelection
-  onSelect: (selection: MixerSelection) => void
   status: ConnectionStatus
   dirty: boolean
   saving: boolean
-  demoPaused: boolean
-  onToggleDemoPaused: () => void
   onSave: () => void
   onOpenDevice: () => void
 }
@@ -55,194 +41,249 @@ const statusCopy: Record<ConnectionStatus, string> = {
   offline: "Terputus",
 }
 
+const statusTone: Record<ConnectionStatus, StatusTone> = {
+  demo: "accent",
+  connecting: "warning",
+  connected: "success",
+  offline: "danger",
+}
+
+const deviceFacts: Array<{ label: string; value: string }> = [
+  { label: "Sample rate", value: "48.0 kHz" },
+  { label: "Input", value: "2" },
+  { label: "Mix channel", value: "8" },
+  { label: "EQ / kanal", value: "15" },
+  { label: "Group / Aux", value: "2 / 2" },
+]
+
 export function AppShell({
   children,
-  selected,
-  onSelect,
   status,
   dirty,
   saving,
-  demoPaused,
-  onToggleDemoPaused,
   onSave,
   onOpenDevice,
 }: AppShellProps) {
-  const online = status === "connected" || status === "demo"
-
   return (
-    <Grid
-      templateColumns={{ base: "minmax(0, 1fr)", md: "220px minmax(0, 1fr)" }}
-      h="100dvh"
-      overflow="hidden"
-      bg="app.bg"
-    >
-      <SkipNavLink id="mixer-content" className="skip-link">Lewati ke mixer</SkipNavLink>
-      <Box as="aside" display={{ base: "none", md: "block" }} borderRightWidth="1px" borderColor="app.border" bg="app.surface">
-        <VStack h="full" align="stretch" gap="0">
-          <HStack px="5" h="72px" gap="3" borderBottomWidth="1px" borderColor="app.border">
-            <Flex boxSize="36px" align="center" justify="center" rounded="app" bg="app.accent" color="app.accentInk">
-              <AudioLines size={20} />
-            </Flex>
-            <Stack gap="0">
-              <Text fontWeight="600" fontSize="sm">P4 Digital Mixer</Text>
-              <Text fontSize="xs" color="app.muted">ESP32-P4</Text>
-            </Stack>
-          </HStack>
+    <Flex direction="column" h="100dvh" overflow="hidden" bg="app.bg">
+      <SkipNavLink className="skip-link">Lewati ke mixer</SkipNavLink>
 
-          <Stack px="3" py="4" gap="1">
-            <Text px="3" pb="2" fontSize="xs" color="app.muted">Workspace</Text>
-            <Button
-              justifyContent="flex-start"
-              variant="ghost"
-              colorPalette="gray"
-              color="app.accent"
-              size="sm"
-              gap="2"
-              aria-current="page"
+      <Flex
+        as="header"
+        h="56px"
+        px={{ base: 3, sm: 4, lg: 5 }}
+        gap="3"
+        align="center"
+        borderBottomWidth="1px"
+        borderColor="app.border"
+        bg="app.surface"
+        flexShrink={0}
+        position="relative"
+        zIndex="10"
+      >
+        <HStack gap="2.5" minW="0">
+          <Flex
+            boxSize="30px"
+            rounded="app"
+            bg="app.accent"
+            color="app.accentInk"
+            align="center"
+            justify="center"
+            flexShrink={0}
+          >
+            <AudioLines size={17} aria-hidden="true" />
+          </Flex>
+          <Stack gap="0" minW="0" display="flex">
+            <Text fontSize="13px" fontWeight="600" lineHeight="16px" color="app.ink" truncate>
+              P4 Digital Mixer
+            </Text>
+            <Text
+              display={{ base: "none", sm: "block" }}
+              fontSize="10px"
+              lineHeight="12px"
+              letterSpacing="0.05em"
+              color="app.faint"
+              className="tabular"
             >
-              <SlidersHorizontal size={16} />
-              Mixer
-            </Button>
+              ESP32-P4 · 48 kHz
+            </Text>
+          </Stack>
+        </HStack>
+
+        <HStack ml="auto" gap={{ base: 1.5, md: 2 }}>
+          <StatusPill
+            tone={statusTone[status]}
+            label={statusCopy[status]}
+            pulse={status === "connected" || status === "demo"}
+          />
+          <Separator
+            orientation="vertical"
+            h="20px"
+            borderColor="app.border"
+            display={{ base: "none", lg: "block" }}
+          />
+          <Text
+            display={{ base: "none", lg: "block" }}
+            fontFamily="mono"
+            fontSize="11px"
+            color="app.muted"
+            className="tabular"
+            flexShrink={0}
+          >
+            48.0 kHz
+          </Text>
+
+          <Tooltip content="Simpan konfigurasi ke perangkat">
             <Button
-              justifyContent="flex-start"
-              variant="ghost"
+              size="sm"
+              h="9"
+              px="3.5"
+              gap="2"
+              bg="app.accent"
+              color="app.accentInk"
+              fontWeight="500"
+              loading={saving}
+              disabled={saving || status === "offline"}
+              aria-label={dirty ? "Simpan konfigurasi, ada perubahan belum disimpan" : "Simpan konfigurasi"}
+              onClick={onSave}
+              _hover={{ bg: "app.accentHover" }}
+              _active={{ bg: "app.accentHover" }}
+            >
+              <Save size={14} aria-hidden="true" />
+              <Box as="span" display={{ base: "none", sm: "inline" }}>
+                Simpan
+              </Box>
+              {dirty && (
+                <Box boxSize="5px" rounded="full" bg="app.accentInk" aria-hidden="true" />
+              )}
+            </Button>
+          </Tooltip>
+
+          <Tooltip content="Pengaturan perangkat">
+            <IconButton
+              aria-label="Buka pengaturan perangkat"
+              variant="outline"
+              h="9"
+              w="9"
+              minW="9"
+              borderColor="app.border"
               color="app.muted"
-              size="sm"
-              gap="2"
+              bg="app.surface"
               onClick={onOpenDevice}
+              _hover={{ bg: "app.raised", color: "app.ink", borderColor: "app.borderStrong" }}
             >
-              <Settings2 size={16} />
-              Perangkat
-            </Button>
-          </Stack>
+              <Settings2 size={15} aria-hidden="true" />
+            </IconButton>
+          </Tooltip>
+        </HStack>
+      </Flex>
 
-          <Separator />
-
-          <Stack px="3" py="4" gap="1" flex="1" minH="0" overflowY="auto">
-            <Text px="3" pb="2" fontSize="xs" color="app.muted">Channel</Text>
-            <ChannelButton
-              label="Master"
-              selected={selected === "master"}
-              onClick={() => onSelect("master")}
-              icon={<Gauge size={15} />}
-            />
-            {Array.from({ length: CHANNEL_COUNT }, (_, index) => (
-              <ChannelButton
-                key={index}
-                label={`Channel ${index + 1}`}
-                selected={selected === index}
-                onClick={() => onSelect(index)}
-              />
-            ))}
-          </Stack>
-
-          <HStack px="5" h="64px" gap="2" borderTopWidth="1px" borderColor="app.border">
-            {online ? <Wifi size={15} color="#4ade80" /> : <WifiOff size={15} color="#f87171" />}
-            <Text fontSize="xs" color="app.muted">{statusCopy[status]}</Text>
-          </HStack>
-        </VStack>
-      </Box>
-
-      <Flex direction="column" minW="0" minH="0">
-        <HStack
-          as="header"
-          h="64px"
-          px={{ base: 4, md: 6 }}
-          gap="3"
-          justify="space-between"
-          borderBottomWidth="1px"
+      <Grid
+        templateColumns={{
+          base: "minmax(0, 1fr)",
+          lg: "64px minmax(0, 1fr)",
+          xl: "232px minmax(0, 1fr)",
+        }}
+        flex="1"
+        minH="0"
+      >
+        <Flex
+          as="aside"
+          aria-label="Navigasi aplikasi"
+          display={{ base: "none", lg: "flex", xl: "none" }}
+          direction="column"
+          align="center"
+          gap="1"
+          py="3"
+          borderRightWidth="1px"
           borderColor="app.border"
           bg="app.surface"
-          flexShrink={0}
         >
-          <HStack gap="3" minW="0">
-            <Flex display={{ base: "flex", md: "none" }} boxSize="32px" align="center" justify="center" rounded="app" bg="app.accent" color="app.accentInk">
-              <AudioLines size={18} />
-            </Flex>
-            <Stack gap="0" minW="0">
-              <Heading as="h1" size="xl" truncate>P4 Digital Mixer</Heading>
-              <Text fontSize="xs" color="app.muted" truncate>8 channel · 48 kHz</Text>
-            </Stack>
-          </HStack>
+          <Tooltip content="Console" positioning={{ placement: "right" }}>
+            <RailItem label="Console" active icon={<SlidersHorizontal size={17} />} />
+          </Tooltip>
+          <Tooltip content="Perangkat" positioning={{ placement: "right" }}>
+            <RailItem label="Perangkat" icon={<Settings2 size={17} />} onClick={onOpenDevice} />
+          </Tooltip>
+          <Box mt="auto" aria-hidden="true">
+            <Box
+              boxSize="6px"
+              rounded="full"
+              bg={status === "offline" ? "app.danger" : "app.accent"}
+            />
+          </Box>
+        </Flex>
 
-          <HStack gap="2">
-            <Badge colorPalette={online ? "green" : "red"} variant="subtle" display={{ base: "none", sm: "inline-flex" }}>
-              <CircleDot size={10} />
-              {statusCopy[status]}
-            </Badge>
-            {dirty && (
-              <Text fontSize="xs" color="app.warning" display={{ base: "none", lg: "block" }}>
-                Belum disimpan
-              </Text>
-            )}
-            {status === "demo" && (
-              <Tooltip content={demoPaused ? "Lanjutkan meter demo" : "Jeda meter demo"}>
-                <IconButton
-                  aria-label={demoPaused ? "Lanjutkan meter demo" : "Jeda meter demo"}
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggleDemoPaused}
-                >
-                  {demoPaused ? <Play size={15} /> : <Pause size={15} />}
-                </IconButton>
-              </Tooltip>
-            )}
-            <Tooltip content="Simpan konfigurasi ke perangkat">
-              <Button
-                size="sm"
-                colorPalette="orange"
-                gap="2"
-                loading={saving}
-                disabled={saving || status === "offline"}
-                aria-label="Simpan konfigurasi"
-                onClick={onSave}
-              >
-                <Save size={15} />
-                <Text display={{ base: "none", sm: "inline" }}>Simpan</Text>
-              </Button>
-            </Tooltip>
-            <Tooltip content="Pengaturan perangkat">
-              <IconButton
-                aria-label="Buka pengaturan perangkat"
-                variant="outline"
-                size="sm"
-                onClick={onOpenDevice}
-              >
-                <Settings2 size={16} />
-              </IconButton>
-            </Tooltip>
-          </HStack>
-        </HStack>
-
-        <HStack
-          as="nav"
-          display={{ base: "flex", md: "none" }}
-          aria-label="Pemilih channel"
-          px="4"
-          py="3"
-          gap="3"
-          borderBottomWidth="1px"
+        <Box
+          as="aside"
+          display={{ base: "none", xl: "block" }}
+          borderRightWidth="1px"
           borderColor="app.border"
-          bg="app.panel"
-          flexShrink={0}
+          bg="app.surface"
+          overflowY="auto"
         >
-          <Text fontSize="sm" color="app.muted" flexShrink={0}>Channel</Text>
-          <NativeSelect.Root size="lg" flex="1">
-            <NativeSelect.Field
-              aria-label="Pilih channel"
-              value={selected === "master" ? "master" : String(selected)}
-              onChange={(event) =>
-                onSelect(event.target.value === "master" ? "master" : Number(event.target.value))
-              }
+          <Flex direction="column" h="full" px="3" py="4" gap="5">
+            <Stack gap="1">
+              <SectionLabel>Workspace</SectionLabel>
+              <NavItem active icon={<SlidersHorizontal size={15} />}>
+                Console
+              </NavItem>
+              <NavItem icon={<Settings2 size={15} />} onClick={onOpenDevice}>
+                Perangkat
+              </NavItem>
+            </Stack>
+
+            <Box borderTopWidth="1px" borderColor="app.border" pt="4">
+              <SectionLabel mb="2">Perangkat</SectionLabel>
+              <Stack gap="1">
+                {deviceFacts.map((fact) => (
+                  <Flex key={fact.label} justify="space-between" align="baseline" gap="2" px="2" py="1">
+                    <Text fontSize="11px" color="app.muted">
+                      {fact.label}
+                    </Text>
+                    <Text fontFamily="mono" fontSize="11px" color="app.ink" className="tabular">
+                      {fact.value}
+                    </Text>
+                  </Flex>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box
+              mt="auto"
+              borderWidth="1px"
+              borderColor="app.border"
+              bg="app.panel"
+              rounded="app"
+              p="3"
             >
-              <option value="master">Master</option>
-              {Array.from({ length: CHANNEL_COUNT }, (_, index) => (
-                <option key={index} value={index}>Channel {index + 1}</option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </HStack>
+              <StatusPill
+                tone={statusTone[status]}
+                label={statusCopy[status]}
+                pulse={status === "connected"}
+              />
+              <Text mt="2" fontSize="11px" lineHeight="16px" color="app.muted">
+                {status === "demo"
+                  ? "Kontrol dan meter memakai data simulasi sampai perangkat terhubung."
+                  : "Status dan konfigurasi perangkat aktif."}
+              </Text>
+              <Button
+                mt="2.5"
+                size="sm"
+                variant="outline"
+                w="full"
+                borderColor="app.border"
+                color="app.ink"
+                bg="app.surface"
+                onClick={onOpenDevice}
+                _hover={{ bg: "app.raised", borderColor: "app.borderStrong" }}
+              >
+                Buka perangkat
+                <ChevronRight size={13} aria-hidden="true" />
+              </Button>
+            </Box>
+          </Flex>
+        </Box>
 
         <SkipNavContent
           as="main"
@@ -250,63 +291,185 @@ export function AppShell({
           flex="1"
           minH="0"
           overflowY="auto"
-          px={{ base: 4, md: 6, xl: 8 }}
-          py={{ base: 5, md: 7 }}
-          pb={{ base: 32, md: 7 }}
+          bg="app.bg"
           className="mixer-main"
         >
           {children}
-          <Box h="24" display={{ base: "block", md: "none" }} aria-hidden="true" />
+          <Box
+            h="calc(60px + env(safe-area-inset-bottom))"
+            display={{ base: "block", lg: "none" }}
+            aria-hidden="true"
+          />
         </SkipNavContent>
-      </Flex>
+      </Grid>
 
       <HStack
         as="nav"
         aria-label="Navigasi utama"
-        display={{ base: "flex", md: "none" }}
+        display={{ base: "flex", lg: "none" }}
         position="fixed"
         insetInline="0"
         bottom="0"
-        h="calc(64px + env(safe-area-inset-bottom))"
+        h="calc(60px + env(safe-area-inset-bottom))"
         pb="env(safe-area-inset-bottom)"
-        justify="space-around"
+        px="3"
+        gap="2"
         borderTopWidth="1px"
         borderColor="app.border"
         bg="app.surface"
         zIndex="20"
       >
-        <Button variant="ghost" color="app.accent" gap="2"><SlidersHorizontal size={17} />Mixer</Button>
-        <Button variant="ghost" color="app.muted" gap="2" onClick={onOpenDevice}><Settings2 size={17} />Perangkat</Button>
+        <MobileNavItem active icon={<SlidersHorizontal size={17} />}>
+          Console
+        </MobileNavItem>
+        <MobileNavItem icon={<Settings2 size={17} />} onClick={onOpenDevice}>
+          Perangkat
+        </MobileNavItem>
       </HStack>
-    </Grid>
+    </Flex>
   )
 }
 
-function ChannelButton({
+function RailItem({
   label,
-  selected,
-  onClick,
   icon,
+  active = false,
+  onClick,
 }: {
   label: string
-  selected: boolean
-  onClick: () => void
-  icon?: React.ReactNode
+  icon: React.ReactNode
+  active?: boolean
+  onClick?: () => void
 }) {
   return (
-    <Button
-      justifyContent="flex-start"
-      variant="ghost"
-      colorPalette="gray"
-      color={selected ? "app.accent" : "app.muted"}
-      fontWeight={selected ? "600" : "400"}
-      size="sm"
-      gap="2"
-      aria-current={selected ? "true" : undefined}
+    <Box
+      as="button"
       onClick={onClick}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      boxSize="10"
+      rounded="app"
+      color={active ? "app.accent" : "app.faint"}
+      bg={active ? "app.accentSoft" : "transparent"}
+      cursor="pointer"
+      transition="background-color 120ms ease, color 120ms ease"
+      _hover={{ bg: active ? "app.accentSoft" : "app.raised", color: active ? "app.accent" : "app.ink" }}
+      _focusVisible={{ outlineOffset: "1px" }}
     >
       {icon}
-      {label}
-    </Button>
+    </Box>
+  )
+}
+
+function SectionLabel({ children, mb }: { children: React.ReactNode; mb?: string }) {  return (
+    <Text
+      px="2"
+      mb={mb}
+      fontSize="10px"
+      fontWeight="600"
+      letterSpacing="0.08em"
+      textTransform="uppercase"
+      color="app.faint"
+      lineHeight="16px"
+    >
+      {children}
+    </Text>
+  )
+}
+
+function NavItem({
+  children,
+  icon,
+  active = false,
+  onClick,
+}: {
+  children: React.ReactNode
+  icon: React.ReactNode
+  active?: boolean
+  onClick?: () => void
+}) {
+  return (
+    <Box
+      as="button"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      position="relative"
+      display="flex"
+      alignItems="center"
+      gap="2.5"
+      w="full"
+      h="9"
+      px="2"
+      rounded="app"
+      fontSize="12px"
+      fontWeight={active ? "600" : "500"}
+      color={active ? "app.accent" : "app.muted"}
+      bg={active ? "app.accentSoft" : "transparent"}
+      cursor="pointer"
+      textAlign="start"
+      transition="background-color 120ms ease, color 120ms ease"
+      _hover={{ bg: active ? "app.accentSoft" : "app.raised", color: active ? "app.accent" : "app.ink" }}
+      _focusVisible={{ outlineOffset: "1px" }}
+    >
+      {active && (
+        <Box
+          position="absolute"
+          left="-1px"
+          top="8px"
+          bottom="8px"
+          w="2px"
+          rounded="1px"
+          bg="app.accent"
+          aria-hidden="true"
+        />
+      )}
+      <Box color={active ? "app.accent" : "app.faint"} display="flex" aria-hidden="true">
+        {icon}
+      </Box>
+      {children}
+    </Box>
+  )
+}
+
+function MobileNavItem({
+  children,
+  icon,
+  active = false,
+  onClick,
+}: {
+  children: React.ReactNode
+  icon: React.ReactNode
+  active?: boolean
+  onClick?: () => void
+}) {
+  return (
+    <Box
+      as="button"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      flex="1"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      gap="1"
+      h="44px"
+      rounded="app"
+      fontSize="11px"
+      fontWeight={active ? "600" : "500"}
+      color={active ? "app.accent" : "app.muted"}
+      bg={active ? "app.accentSoft" : "transparent"}
+      cursor="pointer"
+      _hover={{ bg: active ? "app.accentSoft" : "app.raised" }}
+      _focusVisible={{ outlineOffset: "1px" }}
+    >
+      <Box display="flex" aria-hidden="true">
+        {icon}
+      </Box>
+      {children}
+    </Box>
   )
 }

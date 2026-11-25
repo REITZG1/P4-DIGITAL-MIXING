@@ -1,6 +1,7 @@
 "use client"
 
 import { SimpleGrid } from "@chakra-ui/react"
+import { memo } from "react"
 import { RotaryKnob } from "./RotaryKnob"
 import type { MixerAction, MixChannel, SendBus } from "@/lib/mixer/model"
 
@@ -18,14 +19,9 @@ const sends: Array<{ bus: SendBus; label: string }> = [
   { bus: "aux2", label: "Aux 2" },
 ]
 
-export function SendsPanel({
-  channel,
-  channelIndex,
-  dispatch,
-  disabled = false,
-}: SendsPanelProps) {
+function SendsPanelBase({ channel, channelIndex, dispatch, disabled = false }: SendsPanelProps) {
   return (
-    <SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }} gap="5">
+    <SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }} gap={{ base: 4, md: 6 }} justifyItems="center">
       {sends.map(({ bus, label }) => (
         <RotaryKnob
           key={bus}
@@ -36,9 +32,7 @@ export function SendsPanel({
           step={0.01}
           disabled={disabled}
           formatValue={(value) => `${Math.round(value * 100)}%`}
-          onChange={(value) =>
-            dispatch({ type: "set-send", channel: channelIndex, bus, value })
-          }
+          onChange={(value) => dispatch({ type: "set-send", channel: channelIndex, bus, value })}
         />
       ))}
       <RotaryKnob
@@ -49,10 +43,10 @@ export function SendsPanel({
         step={0.01}
         disabled={disabled}
         formatValue={(value) => `${Math.round(value * 100)}%`}
-        onChange={(value) =>
-          dispatch({ type: "set-reverb", channel: channelIndex, value })
-        }
+        onChange={(value) => dispatch({ type: "set-reverb", channel: channelIndex, value })}
       />
     </SimpleGrid>
   )
 }
+
+export const SendsPanel = memo(SendsPanelBase)

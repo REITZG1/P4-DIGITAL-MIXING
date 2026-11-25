@@ -1,96 +1,116 @@
 "use client"
 
-import { useEffect, useReducer, useState } from "react"
-import { AppShell, type MixerSelection } from "@/components/app-shell/AppShell"
+import { useCallback, useEffect, useReducer, useState } from "react"
+import { Box, Flex, Heading, Stack, Text } from "@chakra-ui/react"
+import { AppShell } from "@/components/app-shell/AppShell"
 import { DeviceDrawer } from "@/components/device/DeviceDrawer"
+import { StatusPill } from "@/components/ui/status-pill"
 import { toaster } from "@/components/ui/toaster"
-import { ChannelWorkspace } from "./ChannelWorkspace"
-import { MasterWorkspace } from "./MasterWorkspace"
+import { ChannelInspector } from "./ChannelInspector"
+import { MixerConsole } from "./MixerConsole"
+import { syncDemoSignal } from "@/lib/mixer/demo-signal"
+import { meterBridge } from "@/lib/mixer/meter-bridge"
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion"
 import {
   createDefaultMixerState,
-  createEmptyVuState,
   mixerReducer,
   type MixerAction,
 } from "@/lib/mixer/model"
 
 export function MixerApp() {
   const [state, dispatch] = useReducer(mixerReducer, undefined, createDefaultMixerState)
-  const [vu, setVu] = useState(createEmptyVuState)
-  const [selected, setSelected] = useState<MixerSelection>(0)
+  const [selected, setSelected] = useState(0)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deviceOpen, setDeviceOpen] = useState(false)
-  const [demoPaused, setDemoPaused] = useState(false)
+  const prefersReducedMotion = usePrefersReducedMotion()
+  const [pausedByUser, setPausedByUser] = useState<boolean | null>(null)
+  const demoPaused = pausedByUser ?? prefersReducedMotion
+
+  // The demo meters read the mixer state straight from this module, so no
+  // meter value ever enters React state.
+  useEffect(() => {
+    syncDemoSignal(state)
+  }, [state])
 
   useEffect(() => {
-    if (demoPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    const timer = window.setInterval(() => {
-      const time = performance.now() / 1000
-      setVu({
-        channels: state.channels.map((_, index) => {
-          const wave = Math.sin(time * 2.4 + index * 0.7) * 0.28
-          const detail = Math.sin(time * 6.1 + index) * 0.12
-          return Math.max(0, Math.min(1, 0.38 + wave + detail))
-        }),
-        bus: {
-          masterL: state.masterMute ? 0 : Math.max(0, Math.min(1, 0.55 + Math.sin(time * 2.1) * 0.22)),
-          masterR: state.masterMute ? 0 : Math.max(0, Math.min(1, 0.55 + Math.sin(time * 2.1 + 0.2) * 0.22)),
-          group1: Math.max(0, Math.sin(time * 1.7) * 0.3),
-          group2: Math.max(0, Math.sin(time * 1.9 + 1) * 0.26),
-          aux1: Math.max(0, Math.sin(time * 2.3 + 2) * 0.2),
-          aux2: Math.max(0, Math.sin(time * 2.6 + 3) * 0.18),
-        },
-      })
-    }, 80)
+    meterBridge.setPaused(demoPaused)
+  }, [demoPaused])
 
-    return () => window.clearInterval(timer)
-  }, [state.channels, state.masterMute, demoPaused])
-
-  const update = (action: MixerAction) => {
+  const update = useCallback((action: MixerAction) => {
     dispatch(action)
     setDirty(true)
-  }
+  }, [])
 
-  const save = async () => {
+  const save = useCallback(async () => {
     setSaving(true)
     await new Promise((resolve) => window.setTimeout(resolve, 350))
     setDirty(false)
     setSaving(false)
     toaster.success({
-      title: "State demo disimpan",
-      description: "Konfigurasi akan dikirim ke ESP32 saat mode perangkat aktif.",
+      title: "Konfigurasi tersimpan",
+      description: "State demo disimpan. Pengiriman ke ESP32 aktif saat perangkat terhubung.",
     })
-  }
+  }, [])
 
   return (
     <>
       <AppShell
-        selected={selected}
-        onSelect={setSelected}
         status="demo"
         dirty={dirty}
         saving={saving}
-        demoPaused={demoPaused}
-        onToggleDemoPaused={() => setDemoPaused((paused) => !paused)}
         onSave={save}
         onOpenDevice={() => setDeviceOpen(true)}
       >
-        {selected === "master" ? (
-          <MasterWorkspace state={state} vu={vu} dispatch={update} />
-        ) : (
-          <ChannelWorkspace
-            channel={state.channels[selected]}
-            channelIndex={selected}
-            vu={vu}
-            dispatch={update}
-          />
-        )}
+        <Box
+          maxW="1440px"
+          mx="auto"
+          w="full"
+          px={{ base: 4, md: 6, xl: 8 }}
+          py={{ base: 4, md: 5, xl: 6 }}
+        >
+          <Stack gap={{ base: 4, md: 5 }}>
+            <Flex justify="space-between" align="flex-end" gap="3" wrap="wrap">
+              <Stack gap="1" minW="0">
+                <Heading
+                  as="h1"
+                  fontSize={{ base: "18px", md: "20px" }}
+                  fontWeight="600"
+                  letterSpacing="-0.01em"
+                  lineHeight="1.25"
+                  color="app.ink"
+                >
+                  Console
+                </Heading>
+                <Text fontSize={{ base: "12px", md: "13px" }} lineHeight="1.5" color="app.muted">
+                  Delapan kanal, dua input fisik, dan bus Main L/R, Group 1–2, Aux 1–2.
+                </Text>
+              </Stack>
+              <StatusPill
+                tone={dirty ? "warning" : "neutral"}
+                label={dirty ? "Perubahan belum disimpan" : "Tidak ada perubahan"}
+              />
+            </Flex>
+
+            <MixerConsole
+              state={state}
+              selected={selected}
+              onSelect={setSelected}
+              dispatch={update}
+              demoPaused={demoPaused}
+              onToggleDemoPaused={() => setPausedByUser(!demoPaused)}
+            />
+
+            <ChannelInspector
+              channel={state.channels[selected]}
+              channelIndex={selected}
+              dispatch={update}
+            />
+          </Stack>
+        </Box>
       </AppShell>
-      <DeviceDrawer
-        open={deviceOpen}
-        onOpenChange={setDeviceOpen}
-        status="demo"
-      />
+
+      <DeviceDrawer open={deviceOpen} onOpenChange={setDeviceOpen} status="demo" />
     </>
   )
 }

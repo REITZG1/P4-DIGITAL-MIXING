@@ -1,7 +1,7 @@
 "use client"
 
 import { Box, Text, VStack } from "@chakra-ui/react"
-import { useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react"
+import { memo, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react"
 import { quantize } from "@/lib/mixer/model"
 import { valueFromVerticalDrag } from "@/lib/mixer/controls"
 
@@ -15,9 +15,10 @@ export interface RotaryKnobProps {
   onChangeEnd?: (value: number) => void
   disabled?: boolean
   formatValue?: (value: number) => string
+  size?: number
 }
 
-export function RotaryKnob({
+function RotaryKnobBase({
   label,
   value,
   min,
@@ -27,14 +28,22 @@ export function RotaryKnob({
   onChangeEnd,
   disabled = false,
   formatValue = (nextValue) => nextValue.toFixed(2),
+  size = 40,
 }: RotaryKnobProps) {
-  const drag = useRef<{ pointerId: number; startY: number; startValue: number } | null>(null)
+  const drag = useRef<{
+    pointerId: number
+    startY: number
+    startValue: number
+    lastValue: number | null
+  } | null>(null)
+
   const range = max - min
   const percentage = range === 0 ? 0 : (value - min) / range
   const angle = -135 + percentage * 270
 
   const update = (nextValue: number, commit = false) => {
     const quantized = quantize(nextValue, { min, max, step })
+    if (drag.current) drag.current.lastValue = quantized
     onChange(quantized)
     if (commit) onChangeEnd?.(quantized)
   }
@@ -45,6 +54,7 @@ export function RotaryKnob({
       pointerId: event.pointerId,
       startY: event.clientY,
       startValue: value,
+      lastValue: null,
     }
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.focus()
@@ -65,8 +75,9 @@ export function RotaryKnob({
 
   const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
     if (!drag.current || drag.current.pointerId !== event.pointerId) return
+    const committed = drag.current.lastValue
     drag.current = null
-    onChangeEnd?.(value)
+    if (committed !== null) onChangeEnd?.(committed)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -84,9 +95,8 @@ export function RotaryKnob({
   }
 
   return (
-    <VStack gap="1.5" minW="64px">
+    <VStack gap="1" minW="0">
       <Box
-        as="div"
         role="slider"
         tabIndex={disabled ? -1 : 0}
         aria-label={label}
@@ -94,9 +104,9 @@ export function RotaryKnob({
         aria-valuemax={max}
         aria-valuenow={value}
         aria-valuetext={formatValue(value)}
-        aria-disabled={disabled}
+        aria-disabled={disabled || undefined}
         position="relative"
-        boxSize="48px"
+        boxSize={`${size}px`}
         cursor={disabled ? "not-allowed" : "ns-resize"}
         touchAction="none"
         userSelect="none"
@@ -114,13 +124,13 @@ export function RotaryKnob({
           update(value + (event.deltaY < 0 ? step : -step), true)
         }}
       >
-        <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
           <circle
             cx="24"
             cy="24"
             r="21"
             fill="none"
-            stroke="#34363a"
+            stroke="var(--chakra-colors-app-border)"
             strokeWidth="3"
             pathLength="100"
             strokeDasharray="75 25"
@@ -131,7 +141,7 @@ export function RotaryKnob({
             cy="24"
             r="21"
             fill="none"
-            stroke="#ff4a1f"
+            stroke="var(--chakra-colors-app-accent)"
             strokeWidth="3"
             strokeLinecap="round"
             pathLength="100"
@@ -141,11 +151,11 @@ export function RotaryKnob({
         </svg>
         <Box
           position="absolute"
-          inset="7px"
+          inset={`${size * 0.15}px`}
           borderRadius="full"
-          bg="app.raised"
+          bg="app.panel"
           borderWidth="1px"
-          borderColor="app.border"
+          borderColor="app.borderStrong"
           style={{ transform: `rotate(${angle}deg)` } as CSSProperties}
         >
           <Box
@@ -153,19 +163,35 @@ export function RotaryKnob({
             top="3px"
             left="50%"
             w="2px"
-            h="9px"
-            borderRadius="full"
+            h={`${size * 0.19}px`}
+            borderRadius="1px"
             bg="app.accent"
             transform="translateX(-50%)"
           />
         </Box>
       </Box>
-      <Text fontSize="xs" color="app.muted" textAlign="center">
+
+      <Text
+        fontSize="10px"
+        fontWeight="500"
+        letterSpacing="0.04em"
+        color="app.faint"
+        textAlign="center"
+        lineHeight="14px"
+      >
         {label}
       </Text>
-      <Text fontFamily="mono" fontSize="xs" color="app.ink">
+      <Text
+        fontFamily="mono"
+        fontSize="11px"
+        color="app.ink"
+        className="tabular"
+        lineHeight="16px"
+      >
         {formatValue(value)}
       </Text>
     </VStack>
   )
 }
+
+export const RotaryKnob = memo(RotaryKnobBase)

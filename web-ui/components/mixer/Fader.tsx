@@ -1,6 +1,7 @@
 "use client"
 
 import { Box, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 import { Slider } from "@/components/ui/slider"
 
 export interface FaderProps {
@@ -14,9 +15,10 @@ export interface FaderProps {
   disabled?: boolean
   height?: number
   formatValue?: (value: number) => string
+  caption?: string
 }
 
-export function Fader({
+function FaderBase({
   label,
   value,
   min,
@@ -25,27 +27,28 @@ export function Fader({
   onChange,
   onChangeEnd,
   disabled = false,
-  height = 190,
+  height = 132,
   formatValue = (nextValue) => nextValue.toFixed(2),
+  caption,
 }: FaderProps) {
   return (
-    <VStack gap="2" minW="44px" w="full" alignItems="center">
+    <VStack gap="2" w="full" minW="0" alignItems="center">
       <Text
         fontFamily="mono"
-        fontSize="xs"
+        fontSize="11px"
+        fontWeight="500"
         color="app.ink"
-        bg="app.bg"
-        borderWidth="1px"
-        borderColor="app.border"
-        borderRadius="md"
-        px="2"
-        py="1"
-        minW="12"
+        className="tabular"
+        py="1px"
+        px="1"
+        minW="10"
+        lineHeight="16px"
         textAlign="center"
       >
         {formatValue(value)}
       </Text>
-      <Box h={height} minW="44px" display="flex" justifyContent="center">
+
+      <Box h={`${height}px`} w="32px" display="flex" justifyContent="center">
         <Slider
           orientation="vertical"
           value={[value]}
@@ -54,22 +57,46 @@ export function Fader({
           step={step}
           disabled={disabled}
           aria-label={label}
-          colorPalette="orange"
-          size="lg"
-          h={height}
-          minW="44px"
+          size="md"
+          h={`${height}px`}
           onValueChange={(details) => onChange(details.value[0])}
           onValueChangeEnd={(details) => onChangeEnd?.(details.value[0])}
           css={{
-            "--slider-thumb-size": "18px",
-            '& [data-part="control"]': { height: `${height}px` },
-            '& [data-part="track"]': { width: "6px", bg: "app.raised" },
+            "--slider-thumb-size": "14px",
+            height: `${height}px`,
+            '& [data-part="control"]': { height: `${height}px`, width: "32px" },
+            '& [data-part="track"]': {
+              width: "4px",
+              borderRadius: "2px",
+              background: "var(--chakra-colors-app-border)",
+            },
+            '& [data-part="range"]': { background: "var(--chakra-colors-app-accent)" },
+            '& [data-part="thumb"]': {
+              border: "1px solid var(--chakra-colors-app-control)",
+              background: "var(--chakra-colors-app-surface)",
+              borderRadius: "3px",
+              boxShadow: "0 1px 2px rgba(15, 23, 42, 0.18)",
+            },
+            '& [data-part="thumb"]:focus-visible': {
+              outline: "2px solid var(--chakra-colors-app-accent)",
+              outlineOffset: "1px",
+            },
           }}
         />
       </Box>
-      <Text fontSize="xs" color="app.muted" textAlign="center">
-        {label}
+
+      <Text
+        fontSize="10px"
+        fontWeight="500"
+        letterSpacing="0.04em"
+        color="app.faint"
+        textAlign="center"
+        lineHeight="14px"
+      >
+        {caption ?? label}
       </Text>
     </VStack>
   )
 }
+
+export const Fader = memo(FaderBase)

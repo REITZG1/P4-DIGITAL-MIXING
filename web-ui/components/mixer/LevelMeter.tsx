@@ -1,53 +1,57 @@
+"use client"
+
 import { Box } from "@chakra-ui/react"
-import { meterPercent } from "@/lib/mixer/controls"
+import { useEffect, useRef } from "react"
+import { meterBridge, type MeterSource } from "@/lib/mixer/meter-bridge"
 
 export interface LevelMeterProps {
   label: string
-  value: number
-  height?: number
-  width?: number
+  source: MeterSource
+  orientation?: "vertical" | "horizontal"
+  length?: number
+  thickness?: number
+  className?: string
+  fluid?: boolean
 }
 
 export function LevelMeter({
   label,
-  value,
-  height = 180,
-  width = 10,
+  source,
+  orientation = "vertical",
+  length = 132,
+  thickness = 8,
+  className,
+  fluid = false,
 }: LevelMeterProps) {
-  const percentage = meterPercent(value)
-  const color = percentage >= 92 ? "app.danger" : percentage >= 72 ? "app.warning" : "app.success"
+  const rootRef = useRef<HTMLDivElement>(null)
+  const fillRef = useRef<HTMLDivElement>(null)
+  const peakRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const root = rootRef.current
+    const fill = fillRef.current
+    if (!root || !fill) return
+    return meterBridge.attach({ root, fill, peak: peakRef.current, source })
+  }, [source])
 
   return (
     <Box
+      ref={rootRef}
       role="meter"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={percentage}
-      position="relative"
-      w={width}
-      h={height}
+      aria-valuenow={0}
+      className={className ? `meter ${className}` : "meter"}
+      data-orientation={orientation}
+      w={fluid ? "full" : orientation === "vertical" ? `${thickness}px` : `${length}px`}
+      h={orientation === "vertical" ? `${length}px` : `${thickness}px`}
+      minW={fluid ? "0" : undefined}
       flexShrink={0}
-      overflow="hidden"
-      borderRadius="full"
-      bg="#0d0e10"
-      borderWidth="1px"
-      borderColor="app.border"
     >
-      <Box
-        position="absolute"
-        insetInline="0"
-        bottom="0"
-        height={`${percentage}%`}
-        bg={color}
-        transition="height 70ms linear, background-color 120ms ease"
-      />
-      <Box
-        position="absolute"
-        inset="0"
-        backgroundImage="repeating-linear-gradient(to bottom, transparent 0, transparent 5px, #0d0e10 5px, #0d0e10 7px)"
-        pointerEvents="none"
-      />
+      <div ref={fillRef} className="meter-fill" />
+      <div className="meter-segments" />
+      <div ref={peakRef} className="meter-peak" />
     </Box>
   )
 }

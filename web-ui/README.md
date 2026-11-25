@@ -25,13 +25,24 @@ Voice: technical and dry, with proof.
 
 ## Design contract
 
-- Dark, dense desktop application with a single accent colour.
+- Light, dense console application: canvas `#F4F6F8`, surfaces `#FFFFFF`,
+  ink `#0F172A`, muted `#5B6B7F`, single teal accent `#0F766E`.
+- Flat surfaces separated by 1px `#E2E8F0` hairlines, never heavy shadows.
+- 6px radius on controls and strips, 8px on panels and dialogs; 4px spacing scale.
+- Inter for the interface, IBM Plex Mono for numeric readouts; labels and
+  buttons use weight 500.
 - No violet, decorative gradients, shaders, photographs, or marketing hero.
 - The mixer controls are the visual subject.
-- Desktop uses an application sidebar and selected-channel workspace.
-- Mobile uses a compact channel picker and bottom navigation.
+- Desktop keeps all eight channel strips and the master strip on screen at
+  once, with a shared EQ / Sends / Dynamics inspector below. Wide viewports
+  get a 232px sidebar, mid-widths a compact icon rail.
+- Mobile uses a horizontally scrollable strip row and a fixed bottom navigation.
 - Chakra UI provides layout, forms, navigation, tabs, overlays, and feedback.
 - Only faders, rotary knobs, and level meters are domain-specific controls.
+- Meter animation runs outside React: `lib/mixer/meter-bridge.ts` writes CSS
+  custom properties at 30 fps from `lib/mixer/demo-signal.ts`, so live levels
+  never trigger a component render. Pausing freezes the last reading, and
+  reduced-motion users start with meters paused.
 
 ## Commands
 
