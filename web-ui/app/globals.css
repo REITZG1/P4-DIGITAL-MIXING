@@ -1,0 +1,64 @@
+:root {
+  color-scheme: dark;
+  --app-bg: #18191b;
+  --app-surface: #222427;
+  --app-ink: #eff0f1;
+  --app-muted: #9c9ea3;
+  --app-accent: #ff4a1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--app-bg);
+  color: var(--app-ink);
+}
+
+body {
+  min-height: 100dvh;
+  font-family: "Familjen Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: var(--app-accent);
+  color: var(--app-bg);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #34363a;
+  border: 3px solid var(--app-bg);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
