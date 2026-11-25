@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import "@fontsource-variable/inter"
-import "@fontsource/ibm-plex-mono/latin-400.css"
-import "@fontsource/ibm-plex-mono/latin-500.css"
+import "@fontsource/share-tech-mono/latin-400.css"
 import "./globals.css"
 import { Provider } from "@/components/ui/provider"
 import { Toaster } from "@/components/ui/toaster"

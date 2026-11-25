@@ -29,7 +29,7 @@ Voice: technical and dry, with proof.
   ink `#0F172A`, muted `#5B6B7F`, single teal accent `#0F766E`.
 - Flat surfaces separated by 1px `#E2E8F0` hairlines, never heavy shadows.
 - 6px radius on controls and strips, 8px on panels and dialogs; 4px spacing scale.
-- Inter for the interface, IBM Plex Mono for numeric readouts; labels and
+- Inter for the interface, Share Tech Mono for numeric readouts; labels and
   buttons use weight 500.
 - No violet, decorative gradients, shaders, photographs, or marketing hero.
 - The mixer controls are the visual subject.

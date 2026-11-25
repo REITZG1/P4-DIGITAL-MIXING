@@ -16,7 +16,7 @@ const config = defineConfig({
           value: '"Inter Variable", Inter, system-ui, -apple-system, sans-serif',
         },
         mono: {
-          value: '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace',
+          value: '"Share Tech Mono", ui-monospace, SFMono-Regular, monospace',
         },
       },
       colors: {
