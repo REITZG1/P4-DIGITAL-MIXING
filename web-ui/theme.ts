@@ -10,10 +10,10 @@ const config = defineConfig({
     tokens: {
       fonts: {
         heading: {
-          value: '"Familjen Grotesk", system-ui, sans-serif',
+          value: '"Familjen Grotesk Variable", system-ui, sans-serif',
         },
         body: {
-          value: '"Familjen Grotesk", system-ui, sans-serif',
+          value: '"Familjen Grotesk Variable", system-ui, sans-serif',
         },
         mono: {
           value: '"IBM Plex Mono", ui-monospace, monospace',

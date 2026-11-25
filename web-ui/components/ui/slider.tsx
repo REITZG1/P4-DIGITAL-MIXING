@@ -1,7 +1,8 @@
 import { Slider as ChakraSlider, For, HStack } from "@chakra-ui/react"
 import * as React from "react"
 
-export interface SliderProps extends ChakraSlider.RootProps {
+export interface SliderProps extends Omit<ChakraSlider.RootProps, "aria-label"> {
+  "aria-label"?: string
   marks?: Array<number | { value: number; label: React.ReactNode }>
   label?: React.ReactNode
   showValue?: boolean
@@ -9,7 +10,7 @@ export interface SliderProps extends ChakraSlider.RootProps {
 
 export const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
   function Slider(props, ref) {
-    const { marks: marksProp, label, showValue, ...rest } = props
+    const { marks: marksProp, label, showValue, "aria-label": ariaLabel, ...rest } = props
     const value = props.defaultValue ?? props.value
 
     const marks = marksProp?.map((mark) => {
@@ -20,7 +21,12 @@ export const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
     const hasMarkLabel = !!marks?.some((mark) => mark.label)
 
     return (
-      <ChakraSlider.Root ref={ref} thumbAlignment="center" {...rest}>
+      <ChakraSlider.Root
+        ref={ref}
+        thumbAlignment="center"
+        aria-label={ariaLabel ? [ariaLabel] : undefined}
+        {...rest}
+      >
         {label && !showValue && (
           <ChakraSlider.Label>{label}</ChakraSlider.Label>
         )}

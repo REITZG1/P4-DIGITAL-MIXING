@@ -49,6 +49,32 @@ export interface MixerState {
   channels: MixChannel[]
 }
 
+export interface VuState {
+  channels: number[]
+  bus: {
+    masterL: number
+    masterR: number
+    group1: number
+    group2: number
+    aux1: number
+    aux2: number
+  }
+}
+
+export function createEmptyVuState(): VuState {
+  return {
+    channels: Array(CHANNEL_COUNT).fill(0),
+    bus: {
+      masterL: 0,
+      masterR: 0,
+      group1: 0,
+      group2: 0,
+      aux1: 0,
+      aux2: 0,
+    },
+  }
+}
+
 export type MixerAction =
   | { type: "set-eq"; channel: number; band: number; value: number }
   | { type: "set-send"; channel: number; bus: SendBus; value: number }

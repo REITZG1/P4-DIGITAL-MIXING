@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#18191b"/>
+  <rect x="72" y="72" width="96" height="96" rx="22" fill="#ff4a1f"/>
+  <g stroke="#18191b" stroke-width="8" stroke-linecap="round">
+    <path d="M96 148V124M96 110V98"/>
+    <path d="M120 148V132M120 114V98"/>
+    <path d="M144 148V136M144 118V98"/>
+  </g>
+  <g fill="#18191b">
+    <circle cx="96" cy="118" r="6"/>
+    <circle cx="120" cy="124" r="6"/>
+    <circle cx="144" cy="128" r="6"/>
+  </g>
+  <text x="72" y="300" fill="#eff0f1" font-family="Arial, sans-serif" font-size="76" font-weight="600">P4 Digital Mixer</text>
+  <text x="72" y="370" fill="#9c9ea3" font-family="Arial, sans-serif" font-size="34">8 channel · 48 kHz · ESP32-P4</text>
+  <rect x="72" y="470" width="1056" height="1" fill="#34363a"/>
+  <text x="72" y="535" fill="#9c9ea3" font-family="Arial, sans-serif" font-size="28">Kontrol mixer audio dari desktop dan perangkat seluler.</text>
+</svg>

@@ -20,7 +20,7 @@ body {
 
 body {
   min-height: 100dvh;
-  font-family: "Familjen Grotesk", system-ui, sans-serif;
+  font-family: "Familjen Grotesk Variable", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -50,6 +50,22 @@ select {
   background: #34363a;
   border: 3px solid var(--app-bg);
   border-radius: 999px;
+}
+
+.mixer-main {
+  padding-bottom: calc(160px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .mixer-main {
+    padding-bottom: 28px;
+  }
+}
+
+@media (max-width: 767px) {
+  button {
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
