@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useReducer, useState } from "react"
+import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { Box, Flex, Heading, Stack, Text } from "@chakra-ui/react"
 import { AppShell } from "@/components/app-shell/AppShell"
 import { DeviceDrawer } from "@/components/device/DeviceDrawer"
@@ -37,10 +37,39 @@ export function MixerApp() {
     meterBridge.setPaused(demoPaused)
   }, [demoPaused])
 
-  const update = useCallback((action: MixerAction) => {
-    dispatch(action)
-    setDirty(true)
+  // Pointer devices can fire far more than 60 events per second. Coalescing
+  // actions into one animation frame keeps a drag at one React render per
+  // frame without dropping any intermediate value.
+  const pending = useRef<MixerAction[]>([])
+  const frame = useRef<number | null>(null)
+  const flush = useCallback(() => {
+    frame.current = null
+    const actions = pending.current
+    pending.current = []
+    for (const action of actions) dispatch(action)
   }, [])
+
+  const update = useCallback(
+    (action: MixerAction) => {
+      setDirty(true)
+      // Discrete actions (mute buttons, external state) should answer on the
+      // same tick; only continuous control drags need frame coalescing.
+      if (action.type === "toggle-channel-mute" || action.type === "toggle-master-mute" || action.type === "replace") {
+        dispatch(action)
+        return
+      }
+      pending.current.push(action)
+      if (frame.current === null) frame.current = window.requestAnimationFrame(flush)
+    },
+    [flush],
+  )
+
+  useEffect(
+    () => () => {
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current)
+    },
+    [],
+  )
 
   const save = useCallback(async () => {
     setSaving(true)

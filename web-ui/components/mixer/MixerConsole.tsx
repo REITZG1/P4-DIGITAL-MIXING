@@ -12,13 +12,13 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { Pause, Play } from "lucide-react"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { ChannelStrip } from "./ChannelStrip"
 import { Fader } from "./Fader"
 import { LevelMeter } from "./LevelMeter"
 import { busMeterSources, masterMeterSources } from "@/lib/mixer/demo-signal"
 import { formatPercent } from "@/lib/mixer/controls"
-import type { MasterParameter, MixerAction, MixerState } from "@/lib/mixer/model"
+import type { MixerAction, MixerState } from "@/lib/mixer/model"
 import { CHANNEL_COUNT } from "@/lib/mixer/model"
 
 export interface MixerConsoleProps {
@@ -47,8 +47,18 @@ export function MixerConsole({
   demoPaused,
   onToggleDemoPaused,
 }: MixerConsoleProps) {
-  const setMaster = (parameter: MasterParameter, value: number) =>
-    dispatch({ type: "set-master", parameter, value })
+  const masterHandlers = useMemo(
+    () =>
+      (["lrL", "lrR"] as const).reduce(
+        (handlers, parameter) => {
+          handlers[parameter] = (value: number) =>
+            dispatch({ type: "set-master", parameter, value })
+          return handlers
+        },
+        {} as Record<"lrL" | "lrR", (value: number) => void>,
+      ),
+    [dispatch],
+  )
 
   // Stable handlers keep every other strip out of the render path while one
   // fader is being dragged.
@@ -191,7 +201,7 @@ export function MixerConsole({
                 disabled={disabled}
                 caption="L"
                 formatValue={formatPercent}
-                onChange={(value) => setMaster("lrL", value)}
+                onChange={masterHandlers.lrL}
               />
               <Fader
                 label="Fader Main R"
@@ -203,7 +213,7 @@ export function MixerConsole({
                 disabled={disabled}
                 caption="R"
                 formatValue={formatPercent}
-                onChange={(value) => setMaster("lrR", value)}
+                onChange={masterHandlers.lrR}
               />
               <VStack gap="1">
                 <LevelMeter

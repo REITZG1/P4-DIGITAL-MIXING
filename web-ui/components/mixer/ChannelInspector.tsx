@@ -1,6 +1,7 @@
 "use client"
 
 import { Box, Flex, Heading, HStack, Stack, Tabs, Text } from "@chakra-ui/react"
+import { memo } from "react"
 import { DynamicsPanel } from "./DynamicsPanel"
 import { EqPanel } from "./EqPanel"
 import { SendsPanel } from "./SendsPanel"
@@ -21,7 +22,7 @@ const tabs = [
   { value: "dynamics", label: "Dynamics", hint: "Compressor" },
 ]
 
-export function ChannelInspector({
+function ChannelInspectorBase({
   channel,
   channelIndex,
   dispatch,
@@ -143,3 +144,5 @@ export function ChannelInspector({
     </Box>
   )
 }
+
+export const ChannelInspector = memo(ChannelInspectorBase)

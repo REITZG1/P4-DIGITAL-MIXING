@@ -43,6 +43,10 @@ Voice: technical and dry, with proof.
   custom properties at 30 fps from `lib/mixer/demo-signal.ts`, so live levels
   never trigger a component render. Pausing freezes the last reading, and
   reduced-motion users start with meters paused.
+- Control updates from drags are coalesced into one animation frame, while
+  discrete actions (mute buttons, device state) dispatch immediately. Panel
+  callbacks and formatters keep stable identities so memoized faders and knobs
+  skip renders when another control changes.
 
 ## Commands
 

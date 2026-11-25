@@ -1,8 +1,9 @@
 "use client"
 
 import { SimpleGrid } from "@chakra-ui/react"
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import { RotaryKnob } from "./RotaryKnob"
+import { formatPercent } from "@/lib/mixer/controls"
 import type { MixerAction, MixChannel, SendBus } from "@/lib/mixer/model"
 
 export interface SendsPanelProps {
@@ -20,6 +21,20 @@ const sends: Array<{ bus: SendBus; label: string }> = [
 ]
 
 function SendsPanelBase({ channel, channelIndex, dispatch, disabled = false }: SendsPanelProps) {
+  const handlers = useMemo(
+    () => ({
+      sends: Object.fromEntries(
+        sends.map(({ bus }) => [
+          bus,
+          (value: number) => dispatch({ type: "set-send", channel: channelIndex, bus, value }),
+        ]),
+      ) as Record<SendBus, (value: number) => void>,
+      reverb: (value: number) =>
+        dispatch({ type: "set-reverb", channel: channelIndex, value }),
+    }),
+    [dispatch, channelIndex],
+  )
+
   return (
     <SimpleGrid columns={{ base: 2, sm: 3, lg: 5 }} gap={{ base: 4, md: 6 }} justifyItems="center">
       {sends.map(({ bus, label }) => (
@@ -31,8 +46,8 @@ function SendsPanelBase({ channel, channelIndex, dispatch, disabled = false }: S
           max={1}
           step={0.01}
           disabled={disabled}
-          formatValue={(value) => `${Math.round(value * 100)}%`}
-          onChange={(value) => dispatch({ type: "set-send", channel: channelIndex, bus, value })}
+          formatValue={formatPercent}
+          onChange={handlers.sends[bus]}
         />
       ))}
       <RotaryKnob
@@ -42,8 +57,8 @@ function SendsPanelBase({ channel, channelIndex, dispatch, disabled = false }: S
         max={1}
         step={0.01}
         disabled={disabled}
-        formatValue={(value) => `${Math.round(value * 100)}%`}
-        onChange={(value) => dispatch({ type: "set-reverb", channel: channelIndex, value })}
+        formatValue={formatPercent}
+        onChange={handlers.reverb}
       />
     </SimpleGrid>
   )
