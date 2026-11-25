@@ -36,14 +36,31 @@ function RotaryKnobBase({
     startValue: number
     lastValue: number | null
   } | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const arcRef = useRef<SVGCircleElement>(null)
+  const dialRef = useRef<HTMLDivElement>(null)
+  const readoutRef = useRef<HTMLParagraphElement>(null)
 
   const range = max - min
   const percentage = range === 0 ? 0 : (value - min) / range
   const angle = -135 + percentage * 270
 
+  // Pointer moves paint straight to the DOM. No React state is touched, so a
+  // drag never waits for a render; the mixer state follows in its own frame.
+  const paint = (next: number) => {
+    const nextPercentage = range === 0 ? 0 : (next - min) / range
+    arcRef.current?.setAttribute("stroke-dasharray", `${nextPercentage * 75} 100`)
+    dialRef.current?.style.setProperty("transform", `rotate(${-135 + nextPercentage * 270}deg)`)
+    const text = formatValue(next)
+    if (readoutRef.current) readoutRef.current.textContent = text
+    rootRef.current?.setAttribute("aria-valuenow", String(next))
+    rootRef.current?.setAttribute("aria-valuetext", text)
+  }
+
   const update = (nextValue: number, commit = false) => {
     const quantized = quantize(nextValue, { min, max, step })
     if (drag.current) drag.current.lastValue = quantized
+    paint(quantized)
     onChange(quantized)
     if (commit) onChangeEnd?.(quantized)
   }
@@ -97,6 +114,7 @@ function RotaryKnobBase({
   return (
     <VStack gap="1" minW="0">
       <Box
+        ref={rootRef}
         role="slider"
         tabIndex={disabled ? -1 : 0}
         aria-label={label}
@@ -137,6 +155,7 @@ function RotaryKnobBase({
             transform="rotate(135 24 24)"
           />
           <circle
+            ref={arcRef}
             cx="24"
             cy="24"
             r="21"
@@ -150,6 +169,7 @@ function RotaryKnobBase({
           />
         </svg>
         <Box
+          ref={dialRef}
           position="absolute"
           inset={`${size * 0.15}px`}
           borderRadius="full"
@@ -182,6 +202,7 @@ function RotaryKnobBase({
         {label}
       </Text>
       <Text
+        ref={readoutRef}
         fontFamily="mono"
         fontSize="11px"
         color="app.ink"
