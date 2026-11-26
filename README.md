@@ -127,7 +127,10 @@ pio run -t upload -e esp32-p4 --upload-port /dev/ttyACM0
 pio device monitor -p /dev/ttyACM0 -b 115200
 ```
 
-On this machine use `C:\Users\Bratas\.platformio\penv\Scripts\pio.exe` if `pio` is not on PATH.
+If `pio` is not on PATH, activate the PlatformIO virtual environment first
+(`$HOME/.platformio/penv/Scripts/activate` on Windows,
+`~/.platformio/penv/bin/activate` on macOS/Linux) or call the `pio` executable
+from that environment. Do not hardcode a machine-specific absolute path.
 
 ### Firmware (ESP-IDF / CI — authoritative release build)
 
@@ -156,7 +159,34 @@ pio run -t uploadfs -e esp32-p4 --upload-port /dev/ttyACM0
 
 The exported SPIFFS image is about 1.8 MB and fits the `0xC70000` (≈12.7 MB) SPIFFS partition.
 
-> **Current limitation:** `main/web_server.cpp` still serves the embedded `HTML_INDEX` string at `/`. A wildcard SPIFFS file-serving handler has not been added yet, so uploading `spiffs/` alone does not replace the embedded page. See `web-ui/docs/PERFORMANCE-RESEARCH.md` for the UI/performance research record.
+`main/web_server.cpp` serves the console from SPIFFS via a wildcard `/*` handler. Flash the firmware **and** the filesystem — uploading only one of them leaves the device without a usable UI.
+
+### Build artifacts and moving them
+
+| Artifact | Path (after build) | Flash offset |
+|----------|--------------------|--------------|
+| Application | `.pio/build/esp32-p4/firmware.bin` | `0x10000` |
+| Filesystem (web UI) | `.pio/build/esp32-p4/spiffs.bin` | `0x390000` |
+| Combined app image | `.pio/build/esp32-p4/firmware.factory.bin` | `0x0` (bootloader + partitions + app) |
+| CI release files | `firmware/release/p4_digital_mixer*.bin` | — |
+
+Copy artifacts for distribution or manual flashing:
+
+```bash
+mkdir -p firmware/release
+cp .pio/build/esp32-p4/firmware.bin .pio/build/esp32-p4/spiffs.bin firmware/release/
+cp .pio/build/esp32-p4/firmware.factory.bin firmware/release/
+```
+
+Manual flash with `esptool.py` (ports adapt to your machine):
+
+```bash
+esptool.py --chip esp32p4 --port /dev/ttyACM0 write_flash \
+  0x10000 .pio/build/esp32-p4/firmware.bin \
+  0x390000 .pio/build/esp32-p4/spiffs.bin
+```
+
+Use `firmware.factory.bin` at `0x0` instead when flashing a factory image that also needs the bootloader and partition table. See `web-ui/README.md` for UI-only commands and `web-ui/docs/PERFORMANCE-RESEARCH.md` for the UI/performance research record.
 
 ---
 
