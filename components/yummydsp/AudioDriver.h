@@ -18,6 +18,15 @@
 // Compatibility defines for new I2S driver (types removed in IDF 5.x)
 typedef int i2s_bits_per_sample_t;
 typedef int i2s_comm_format_t;
+// The new I2S driver removed i2s_port_t and uses an integer channel id,
+// so keeping the old port argument as int preserves the existing API.
+typedef int i2s_port_t;
+#ifndef I2S_NUM_0
+#define I2S_NUM_0 0
+#endif
+#ifndef I2S_NUM_1
+#define I2S_NUM_1 1
+#endif
 #ifndef I2S_BITS_PER_SAMPLE_32BIT
 #define I2S_BITS_PER_SAMPLE_32BIT ((i2s_bits_per_sample_t)32)
 #endif

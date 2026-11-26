@@ -6,8 +6,8 @@ void commandInterpreter();
 #include <YummyDSP.h>
 #include <AudioDriver.h>
 #include <ArduinoJson.h>
-#include "DualCompressor.h"
-#include "settings.h"
+#include "dsp_compressor.h"
+#include "app_config.h"
 #include "SPIFFS.h"
 
 extern bool espRestart;

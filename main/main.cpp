@@ -7,10 +7,10 @@
 #include <YummyDSP.h>
 #include <AudioDriver.h>
 
-#include "DualCompressor.h"
-#include "settings.h"
-#include "global_vars.h"
-#include "serial_cmd.h"
+#include "dsp_compressor.h"
+#include "app_config.h"
+#include "mixer_state.h"
+#include "serial_console.h"
 #include "web_server.h"
 
 Preferences preferences;
