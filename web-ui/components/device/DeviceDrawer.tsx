@@ -3,38 +3,42 @@
 import { Box, Drawer, Flex, Heading, HStack, Stack, Text } from "@chakra-ui/react"
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill"
 import type { ConnectionStatus } from "@/components/app-shell/AppShell"
+import type { DeviceInfo } from "@/lib/use-device-status"
 
 export interface DeviceDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   status: ConnectionStatus
+  deviceInfo: DeviceInfo | null
 }
 
 const statusLabel: Record<ConnectionStatus, string> = {
-  demo: "Mode demo",
   connecting: "Menghubungkan",
   connected: "Terhubung",
+  reconnecting: "Menyambung ulang",
   offline: "Terputus",
 }
 
 const statusTone: Record<ConnectionStatus, StatusTone> = {
-  demo: "accent",
   connecting: "warning",
   connected: "success",
+  reconnecting: "warning",
   offline: "danger",
 }
 
-const facts: Array<{ label: string; value: string }> = [
-  { label: "Perangkat", value: "ESP32-P4" },
-  { label: "Sample rate", value: "48.0 kHz" },
-  { label: "Input fisik", value: "2" },
-  { label: "Mix channel", value: "8" },
-  { label: "EQ per kanal", value: "15 band" },
-  { label: "Bus", value: "Main L/R · Group 1–2 · Aux 1–2" },
-  { label: "Transport", value: "WebSocket + HTTP" },
-]
+function getFacts(info: DeviceInfo | null): Array<{ label: string; value: string }> {
+  return [
+    { label: "Sample rate", value: info?.sampleRate ? `${(info.sampleRate / 1000).toFixed(1)} kHz` : "—" },
+    { label: "Mix channel", value: info?.channels ? String(info.channels) : "—" },
+    { label: "WiFi STA", value: info ? (info.stationConnected ? "Terhubung" : "AP only") : "—" },
+    { label: "SSID", value: info?.stationSsid ?? "—" },
+    { label: "Alamat IP", value: info?.stationIp ?? "192.168.4.1" },
+    { label: "Master mute", value: info ? (info.masterMute ? "Aktif" : "Nonaktif") : "—" },
+    { label: "Kompresor", value: info ? (info.compressor ? "Aktif" : "Nonaktif") : "—" },
+  ]
+}
 
-export function DeviceDrawer({ open, onOpenChange, status }: DeviceDrawerProps) {
+export function DeviceDrawer({ open, onOpenChange, status, deviceInfo }: DeviceDrawerProps) {
   return (
     <Drawer.Root open={open} onOpenChange={(details) => onOpenChange(details.open)} placement="end">
       <Drawer.Backdrop />
@@ -86,7 +90,7 @@ export function DeviceDrawer({ open, onOpenChange, status }: DeviceDrawerProps) 
               </Flex>
 
               <Box borderWidth="1px" borderColor="app.border" rounded="app" overflow="hidden">
-                {facts.map((fact, index) => (
+                {getFacts(deviceInfo).map((fact, index) => (
                   <Flex
                     key={fact.label}
                     justify="space-between"
@@ -121,12 +125,14 @@ export function DeviceDrawer({ open, onOpenChange, status }: DeviceDrawerProps) 
                 p="3"
               >
                 <Heading as="h3" fontSize="12px" fontWeight="600" color="app.accent" mb="1">
-                  Data simulasi
+                  Koneksi perangkat
                 </Heading>
                 <Text fontSize="11px" lineHeight="1.6" color="app.muted">
-                  {status === "demo"
-                    ? "Kontrol, meter, dan penyimpanan berjalan lokal. Setelah WebSocket perangkat aktif, state yang sama dikirim ke ESP32-P4."
-                    : "Kontrol terhubung ke perangkat. Perubahan langsung dikirim lewat WebSocket."}
+                  {status === "connected"
+                    ? "Meter dan kontrol berasal dari ESP32-P4. Perubahan dikirim lewat WebSocket, tombol Simpan menyimpan ke perangkat."
+                    : status === "reconnecting"
+                      ? "Sedang mencoba menyambung kembali. Status tidak berubah tiap percobaan agar tidak mengganggu."
+                      : "WebSocket belum aktif. Perubahan ditahan di antarmuka sampai perangkat kembali terhubung."}
                 </Text>
               </Box>
             </Stack>

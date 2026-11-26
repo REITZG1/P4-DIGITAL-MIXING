@@ -4,6 +4,7 @@ import "@fontsource/share-tech-mono/latin-400.css"
 import "./globals.css"
 import { Provider } from "@/components/ui/provider"
 import { Toaster } from "@/components/ui/toaster"
+import { ZoomGuard } from "@/components/ui/zoom-guard"
 
 const description =
   "Konsol kontrol mixer audio ESP32-P4: delapan kanal, EQ 15 band, dan bus Main, Group, serta Aux."
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   description,
   applicationName: "P4 Digital Mixer",
   icons: {
-    icon: "/icon.svg",
+    icon: "./icon.svg",
   },
   openGraph: {
     title: "P4 Digital Mixer",
@@ -40,6 +41,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#FFFFFF",
 }
@@ -51,6 +54,7 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body>
         <Provider>
+          <ZoomGuard />
           {children}
           <Toaster />
         </Provider>

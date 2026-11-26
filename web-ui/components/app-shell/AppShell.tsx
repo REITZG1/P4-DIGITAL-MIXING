@@ -22,12 +22,15 @@ import {
 } from "@chakra-ui/react"
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill"
 import { Tooltip } from "@/components/ui/tooltip"
+import type { ConnectionStatus } from "@/lib/mixer/use-mixer-socket"
+import type { DeviceInfo } from "@/lib/use-device-status"
 
-export type ConnectionStatus = "demo" | "connecting" | "connected" | "offline"
+export type { ConnectionStatus }
 
 export interface AppShellProps {
   children: React.ReactNode
   status: ConnectionStatus
+  deviceInfo: DeviceInfo | null
   dirty: boolean
   saving: boolean
   onSave: () => void
@@ -35,30 +38,32 @@ export interface AppShellProps {
 }
 
 const statusCopy: Record<ConnectionStatus, string> = {
-  demo: "Mode demo",
   connecting: "Menghubungkan",
   connected: "Terhubung",
+  reconnecting: "Menyambung ulang",
   offline: "Terputus",
 }
 
 const statusTone: Record<ConnectionStatus, StatusTone> = {
-  demo: "accent",
   connecting: "warning",
   connected: "success",
+  reconnecting: "warning",
   offline: "danger",
 }
 
-const deviceFacts: Array<{ label: string; value: string }> = [
-  { label: "Sample rate", value: "48.0 kHz" },
-  { label: "Input", value: "2" },
-  { label: "Mix channel", value: "8" },
-  { label: "EQ / kanal", value: "15" },
-  { label: "Group / Aux", value: "2 / 2" },
-]
+function getDeviceFacts(info: DeviceInfo | null): Array<{ label: string; value: string }> {
+  return [
+    { label: "Sample rate", value: info?.sampleRate ? `${(info.sampleRate / 1000).toFixed(1)} kHz` : "—" },
+    { label: "Mix channel", value: info?.channels ? String(info.channels) : "—" },
+    { label: "WiFi STA", value: info ? (info.stationConnected ? "Terhubung" : "AP only") : "—" },
+    { label: "Alamat IP", value: info?.stationIp ?? "192.168.4.1" },
+  ]
+}
 
 export function AppShell({
   children,
   status,
+  deviceInfo,
   dirty,
   saving,
   onSave,
@@ -105,7 +110,7 @@ export function AppShell({
               color="app.faint"
               className="tabular"
             >
-              ESP32-P4 · 48 kHz
+              ESP32-P4 · Digital Mixer
             </Text>
           </Stack>
         </HStack>
@@ -114,7 +119,7 @@ export function AppShell({
           <StatusPill
             tone={statusTone[status]}
             label={statusCopy[status]}
-            pulse={status === "connected" || status === "demo"}
+            pulse={status === "connected"}
           />
           <Separator
             orientation="vertical"
@@ -130,7 +135,7 @@ export function AppShell({
             className="tabular"
             flexShrink={0}
           >
-            48.0 kHz
+            {deviceInfo?.sampleRate ? `${(deviceInfo.sampleRate / 1000).toFixed(1)} kHz` : "—"}
           </Text>
 
           <Tooltip content="Simpan konfigurasi ke perangkat">
@@ -142,6 +147,8 @@ export function AppShell({
               bg="app.accent"
               color="app.accentInk"
               fontWeight="500"
+              fontSize="12px"
+              lineHeight="16px"
               loading={saving}
               disabled={saving || status === "offline"}
               aria-label={dirty ? "Simpan konfigurasi, ada perubahan belum disimpan" : "Simpan konfigurasi"}
@@ -236,7 +243,7 @@ export function AppShell({
             <Box borderTopWidth="1px" borderColor="app.border" pt="4">
               <SectionLabel mb="2">Perangkat</SectionLabel>
               <Stack gap="1">
-                {deviceFacts.map((fact) => (
+                {getDeviceFacts(deviceInfo).map((fact) => (
                   <Flex key={fact.label} justify="space-between" align="baseline" gap="2" px="2" py="1">
                     <Text fontSize="11px" color="app.muted">
                       {fact.label}
@@ -263,15 +270,20 @@ export function AppShell({
                 pulse={status === "connected"}
               />
               <Text mt="2" fontSize="11px" lineHeight="16px" color="app.muted">
-                {status === "demo"
-                  ? "Kontrol dan meter memakai data simulasi sampai perangkat terhubung."
-                  : "Status dan konfigurasi perangkat aktif."}
+                {status === "connected"
+                  ? "Kontrol dan meter terhubung langsung ke perangkat."
+                  : status === "reconnecting"
+                    ? "Koneksi terputus. Mencoba menyambung lagi dengan jeda bertambah."
+                    : "Menunggu WebSocket perangkat. Kontrol tetap dapat diatur."}
               </Text>
               <Button
                 mt="2.5"
                 size="sm"
                 variant="outline"
                 w="full"
+                fontSize="12px"
+                lineHeight="16px"
+                fontWeight="500"
                 borderColor="app.border"
                 color="app.ink"
                 bg="app.surface"

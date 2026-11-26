@@ -401,15 +401,17 @@ Keputusan: tidak menambah Zustand/Redux; tidak menambah `<Profiler>` ke produksi
 ## I. Status kerja
 
 ```
- M components/mixer/Fader.tsx
- M components/mixer/RotaryKnob.tsx
- D components/ui/slider.tsx
- M app/layout.tsx
- M theme.ts
- M app/globals.css
- M README.md
- M package.json / package-lock.json   (font Share Tech Mono)
-?? docs/PERFORMANCE-RESEARCH.md
+Mode demo sudah dihapus. Web UI sekarang memakai WebSocket nyata:
+- lib/mixer/use-mixer-socket.ts  (hubung /ws, reconnect, kirim aksi "set")
+- lib/mixer/vu-store.ts          (frame "vu" dari firmware → meter bridge)
+- lib/use-device-status.ts       (/api/status untuk info perangkat)
+- components/mixer/MixerApp.tsx  (status connected/connecting/offline, save via /api/save)
+- demo-signal.ts                 dihapus
+
+Verifikasi dengan WebSocket palsu: tidak ada teks "Mode demo", frame vu
+langsung mengubah meter (0.75 / 0.60), drag mengirim aksi "set" dengan
+8 channel, dan status menampilkan "Terhubung".
 ```
 
-Belum di-commit, belum di-push.
+Catatan firmware: handler `set` di `main/web_server.cpp` belum membaca field
+`mute`, jadi mute belum sampai ke perangkat. Perlu ditambah di firmware.

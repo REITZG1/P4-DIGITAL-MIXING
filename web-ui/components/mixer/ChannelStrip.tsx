@@ -4,7 +4,7 @@ import { Box, Flex, HStack, Text } from "@chakra-ui/react"
 import { memo } from "react"
 import { Fader } from "./Fader"
 import { LevelMeter } from "./LevelMeter"
-import { channelMeterSources } from "@/lib/mixer/demo-signal"
+import { channelVuSources } from "@/lib/mixer/vu-store"
 import { channelKind, channelName, channelNumber, formatPercent } from "@/lib/mixer/controls"
 import type { MixChannel } from "@/lib/mixer/model"
 
@@ -99,7 +99,7 @@ function ChannelStripBase({
       <HStack gap="2" justify="center" align="center" mt="2">
         <LevelMeter
           label={`Level ${name}`}
-          source={channelMeterSources[index]}
+          source={channelVuSources[index]}
           length={METER_HEIGHT}
           thickness={8}
         />

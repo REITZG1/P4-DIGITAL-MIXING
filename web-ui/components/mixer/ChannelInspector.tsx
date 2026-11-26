@@ -102,6 +102,9 @@ function ChannelInspectorBase({
               _selected={{ color: "app.ink", fontWeight: "600" }}
               _focusVisible={{ outlineOffset: "-2px" }}
               css={{
+                // Chakra's line variant draws its own dark indicator; hide it so
+                // the teal inset underline below is the only tab indicator.
+                "&::before": { display: "none" },
                 "&[data-selected]": {
                   boxShadow: "inset 0 -2px 0 0 var(--chakra-colors-app-accent)",
                   borderBottomColor: "transparent",

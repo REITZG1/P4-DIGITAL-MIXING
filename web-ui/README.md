@@ -40,9 +40,9 @@ Voice: technical and dry, with proof.
 - Chakra UI provides layout, forms, navigation, tabs, overlays, and feedback.
 - Only faders, rotary knobs, and level meters are domain-specific controls.
 - Meter animation runs outside React: `lib/mixer/meter-bridge.ts` writes CSS
-  custom properties at 30 fps from `lib/mixer/demo-signal.ts`, so live levels
-  never trigger a component render. Pausing freezes the last reading, and
-  reduced-motion users start with meters paused.
+  custom properties at 30 fps from `lib/mixer/vu-store.ts`, which is fed by
+  real `vu` frames from the device WebSocket. Live levels never trigger a
+  component render. Reduced-motion users start with meters paused.
 - Control updates from drags are coalesced into one animation frame, while
   discrete actions (mute buttons, device state) dispatch immediately. Panel
   callbacks and formatters keep stable identities so memoized faders and knobs
@@ -59,4 +59,4 @@ npm test
 npm run build
 ```
 
-`npm run build` creates the static export in `out/`.
+`npm run build` creates the static export in `build/`.

@@ -23,8 +23,8 @@ function clampLevel(value: number): number {
  * Drives every level meter outside React.
  *
  * Meters update 30 times a second. Keeping that in component state meant the
- * whole console re-rendered on every tick, which is what made the demo mode
- * crawl. Here each meter writes two custom properties to its own DOM node, so
+ * whole console re-rendered on every tick. Here each meter writes two custom
+ * properties to its own DOM node, so
  * a live meter costs no render at all.
  */
 class MeterBridge {

@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Button,
   Flex,
   Heading,
   HStack,
@@ -11,12 +10,11 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { Pause, Play } from "lucide-react"
 import { useCallback, useMemo } from "react"
 import { ChannelStrip } from "./ChannelStrip"
 import { Fader } from "./Fader"
 import { LevelMeter } from "./LevelMeter"
-import { busMeterSources, masterMeterSources } from "@/lib/mixer/demo-signal"
+import { busVuSources, masterVuSources } from "@/lib/mixer/vu-store"
 import { formatPercent } from "@/lib/mixer/controls"
 import type { MixerAction, MixerState } from "@/lib/mixer/model"
 import { CHANNEL_COUNT } from "@/lib/mixer/model"
@@ -27,8 +25,6 @@ export interface MixerConsoleProps {
   onSelect: (index: number) => void
   dispatch: React.Dispatch<MixerAction>
   disabled?: boolean
-  demoPaused: boolean
-  onToggleDemoPaused: () => void
 }
 
 const busLabels: Array<{ key: "group1" | "group2" | "aux1" | "aux2"; label: string }> = [
@@ -44,8 +40,6 @@ export function MixerConsole({
   onSelect,
   dispatch,
   disabled = false,
-  demoPaused,
-  onToggleDemoPaused,
 }: MixerConsoleProps) {
   const masterHandlers = useMemo(
     () =>
@@ -105,23 +99,9 @@ export function MixerConsole({
             Level dan fader tiap kanal
           </Text>
         </Stack>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          color="app.muted"
-          gap="1.5"
-          px="2"
-          h={{ base: "11", md: "8" }}
-          onClick={onToggleDemoPaused}
-          aria-pressed={demoPaused}
-          _hover={{ bg: "app.raised", color: "app.ink" }}
-        >
-          {demoPaused ? <Play size={13} aria-hidden="true" /> : <Pause size={13} aria-hidden="true" />}
-          <Text fontSize="11px" fontWeight="500">
-            {demoPaused ? "Lanjutkan meter" : "Jeda meter"}
-          </Text>
-        </Button>
+        <Text fontSize="11px" color="app.faint" whiteSpace="nowrap">
+          Level langsung dari perangkat
+        </Text>
       </Flex>
 
       <Box px="3" py="3" overflowX="auto" className="strip-scroll">
@@ -183,7 +163,7 @@ export function MixerConsole({
               <VStack gap="1">
                 <LevelMeter
                   label="Level Main L"
-                  source={masterMeterSources.left}
+                  source={masterVuSources.left}
                   length={128}
                   thickness={8}
                 />
@@ -218,7 +198,7 @@ export function MixerConsole({
               <VStack gap="1">
                 <LevelMeter
                   label="Level Main R"
-                  source={masterMeterSources.right}
+                  source={masterVuSources.right}
                   length={128}
                   thickness={8}
                 />
@@ -278,7 +258,7 @@ export function MixerConsole({
               </Flex>
               <LevelMeter
                 label={`Level ${bus.label}`}
-                source={busMeterSources[bus.key]}
+                source={busVuSources[bus.key]}
                 orientation="horizontal"
                 thickness={6}
                 fluid

@@ -8,8 +8,9 @@ import { StatusPill } from "@/components/ui/status-pill"
 import { toaster } from "@/components/ui/toaster"
 import { ChannelInspector } from "./ChannelInspector"
 import { MixerConsole } from "./MixerConsole"
-import { syncDemoSignal } from "@/lib/mixer/demo-signal"
 import { meterBridge } from "@/lib/mixer/meter-bridge"
+import { useMixerSocket } from "@/lib/mixer/use-mixer-socket"
+import { useDeviceInfo } from "@/lib/use-device-status"
 import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion"
 import {
   createDefaultMixerState,
@@ -23,23 +24,18 @@ export function MixerApp() {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deviceOpen, setDeviceOpen] = useState(false)
+  const deviceInfo = useDeviceInfo()
   const prefersReducedMotion = usePrefersReducedMotion()
-  const [pausedByUser, setPausedByUser] = useState<boolean | null>(null)
-  const demoPaused = pausedByUser ?? prefersReducedMotion
-
-  // The demo meters read the mixer state straight from this module, so no
-  // meter value ever enters React state.
-  useEffect(() => {
-    syncDemoSignal(state)
-  }, [state])
+  const { status } = useMixerSocket(state)
 
   useEffect(() => {
-    meterBridge.setPaused(demoPaused)
-  }, [demoPaused])
+    meterBridge.setPaused(prefersReducedMotion)
+  }, [prefersReducedMotion])
 
   // Pointer devices can fire far more than 60 events per second. Coalescing
   // actions into one animation frame keeps a drag at one React render per
-  // frame without dropping any intermediate value.
+  // frame without dropping any intermediate value. The socket hook sends the
+  // resulting state to the device with its own short debounce.
   const pending = useRef<MixerAction[]>([])
   const frame = useRef<number | null>(null)
   const flush = useCallback(() => {
@@ -54,7 +50,11 @@ export function MixerApp() {
       setDirty(true)
       // Discrete actions (mute buttons, external state) should answer on the
       // same tick; only continuous control drags need frame coalescing.
-      if (action.type === "toggle-channel-mute" || action.type === "toggle-master-mute" || action.type === "replace") {
+      if (
+        action.type === "toggle-channel-mute" ||
+        action.type === "toggle-master-mute" ||
+        action.type === "replace"
+      ) {
         dispatch(action)
         return
       }
@@ -73,19 +73,29 @@ export function MixerApp() {
 
   const save = useCallback(async () => {
     setSaving(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 350))
-    setDirty(false)
-    setSaving(false)
-    toaster.success({
-      title: "Konfigurasi tersimpan",
-      description: "State demo disimpan. Pengiriman ke ESP32 aktif saat perangkat terhubung.",
-    })
+    try {
+      const response = await fetch("/api/save", { method: "POST" })
+      if (!response.ok) throw new Error(String(response.status))
+      setDirty(false)
+      toaster.success({
+        title: "Konfigurasi tersimpan",
+        description: "State mixer disimpan ke perangkat.",
+      })
+    } catch {
+      toaster.error({
+        title: "Gagal menyimpan",
+        description: "Perangkat tidak merespons. Periksa koneksi lalu coba lagi.",
+      })
+    } finally {
+      setSaving(false)
+    }
   }, [])
 
   return (
     <>
       <AppShell
-        status="demo"
+        status={status}
+        deviceInfo={deviceInfo}
         dirty={dirty}
         saving={saving}
         onSave={save}
@@ -126,8 +136,6 @@ export function MixerApp() {
               selected={selected}
               onSelect={setSelected}
               dispatch={update}
-              demoPaused={demoPaused}
-              onToggleDemoPaused={() => setPausedByUser(!demoPaused)}
             />
 
             <ChannelInspector
@@ -139,7 +147,12 @@ export function MixerApp() {
         </Box>
       </AppShell>
 
-      <DeviceDrawer open={deviceOpen} onOpenChange={setDeviceOpen} status="demo" />
+      <DeviceDrawer
+        open={deviceOpen}
+        onOpenChange={setDeviceOpen}
+        status={status}
+        deviceInfo={deviceInfo}
+      />
     </>
   )
 }
