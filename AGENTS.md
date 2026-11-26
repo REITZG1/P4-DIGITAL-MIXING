@@ -14,7 +14,7 @@ idf.py build
 
 CI first clones `arduino-esp32` (branch `idf-release/v5.5`) and `ArduinoJson` (branch `7.x`) into `components/arduino` and `components/arduinojson` — these are build-time only and must not be committed.
 
-Local alternative (PlatformIO, pioarduino fork required). `pio` may not be on PATH in this environment; invoke `C:\Users\Bratas\.platformio\penv\Scripts\pio.exe` (or add that dir to PATH):
+Local alternative (PlatformIO, pioarduino fork required). Activate the PlatformIO virtual environment or put its `bin`/`Scripts` directory on PATH before running `pio`; do not hardcode a machine-specific absolute path:
 
 ```bash
 pio run -e esp32-p4
