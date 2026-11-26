@@ -34,7 +34,7 @@ pio device monitor -p /dev/ttyACM0 -b 115200
 
 ## Hardware / pins (README is stale)
 
-The README pin table describes the original 8-ch TDM build and is out of date. Trust `main/settings.h`. Current code is a simplified 4-ch test build:
+The README documents the current simplified build. Trust `main/app_config.h` for pin definitions. Current firmware uses two physical inputs:
 
 - `NUM_PHYS_IN = 2`, `SampleRateFreq = 48000`, `channelCount = 2`
 - ESP32-P4: `I2S_BCK_PIN=22`, `I2S_LRCLK_PIN=21`, `I2S_DIN_PIN=23`, `I2S_DIN2_PIN=24`, `I2S0_MCLK_PIN=20`, `I2S_DOUT_PIN=-1`

@@ -44,15 +44,15 @@ jobs:
         run: |
           . /opt/esp/idf/export.sh
           mkdir -p firmware/release
-          cp build/audio_mixer_p4.bin firmware/release/
+          cp build/p4_digital_mixer.bin firmware/release/
           cp build/bootloader/bootloader.bin firmware/release/ 2>/dev/null || true
           cp build/partition_table/partition-table.bin firmware/release/ 2>/dev/null || true
           esptool.py --chip esp32p4 merge_bin \
-            --output firmware/release/audio_mixer_p4_merged.bin \
+            --output firmware/release/p4_digital_mixer_merged.bin \
             --flash_mode qio --flash_size 16MB \
             0x0 firmware/release/bootloader.bin \
             0x8000 firmware/release/partition-table.bin \
-            0x10000 firmware/release/audio_mixer_p4.bin
+            0x10000 firmware/release/p4_digital_mixer.bin
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

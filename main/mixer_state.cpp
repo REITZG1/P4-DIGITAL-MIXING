@@ -1,4 +1,4 @@
-#include "global_vars.h"
+#include "mixer_state.h"
 #include <cmath>
 
 bool espRestart = false;

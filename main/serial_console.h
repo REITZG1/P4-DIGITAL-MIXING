@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include "global_vars.h"
+#include "mixer_state.h"
 
 const int SEP_COUNT = 60;
 
